@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head><title>Results for {{ query }}</title></head>
+<body>
+<h2>Results for "{{ query }}"</h2>
+<ul>
+    {% for torrent in results %}
+    <li>
+        <strong>{{ torrent.name }}</strong><br>
+        Seeders: {{ torrent.seeders }} | Leechers: {{ torrent.leechers }}<br>
+        <a href="{{ torrent.magnet }}">Magnet Link</a>
+    </li>
+    {% endfor %}
+</ul>
+</body>
+</html>
