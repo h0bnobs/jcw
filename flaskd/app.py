@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request
 
+from src.download_torrent import download_torrent
 from src.query_torrent_api import search_for_torrent
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
@@ -20,5 +21,5 @@ def search():
     return render_template('results.html', results=results, query=query)
 
 @app.route('/download-torrent', methods=['GET'])
-def download_torrent():
-    torrent_magnet_link = request.args.get('magnet')
+def download():
+    download_torrent(request.args.get('magnet'), '.')

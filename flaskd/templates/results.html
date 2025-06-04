@@ -8,7 +8,9 @@
     <li>
         <strong>{{ torrent.name }}</strong><br>
         Seeders: {{ torrent.seeders }} | Leechers: {{ torrent.leechers }}<br>Size: {{ torrent.size }}<br>Uploader: {{ torrent.uploader }}<br>
-        <form action="">
+        <form action="/download-torrent"  method="get">
+            <input type="hidden" name="magnet" value="{{ torrent.magnet }}">
+            <button type="submit">Download</button>
         </form>
     </li>
     {% endfor %}
