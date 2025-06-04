@@ -1,3 +1,4 @@
 .idea
 .venv
 flaskd/__pycache__
+src/__pycache__

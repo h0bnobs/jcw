@@ -18,3 +18,7 @@ def search():
 
     results = search_for_torrent(query)
     return render_template('results.html', results=results, query=query)
+
+@app.route('/download-torrent', methods=['GET'])
+def download_torrent():
+    torrent_magnet_link = request.args.get('magnet')

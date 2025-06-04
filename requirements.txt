@@ -1,0 +1,10 @@
+requests
+Flask
+GitPython
+aiohttp[speedups]
+beautifulsoup4
+cloudscraper
+fastapi==0.104.1
+gunicorn
+mangum
+uvicorn[standard]

@@ -7,8 +7,9 @@
     {% for torrent in results %}
     <li>
         <strong>{{ torrent.name }}</strong><br>
-        Seeders: {{ torrent.seeders }} | Leechers: {{ torrent.leechers }}<br>
-        <a href="{{ torrent.magnet }}">Magnet Link</a>
+        Seeders: {{ torrent.seeders }} | Leechers: {{ torrent.leechers }}<br>Size: {{ torrent.size }}<br>Uploader: {{ torrent.uploader }}<br>
+        <form action="">
+        </form>
     </li>
     {% endfor %}
 </ul>
