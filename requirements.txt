@@ -8,3 +8,5 @@ fastapi==0.104.1
 gunicorn
 mangum
 uvicorn[standard]
+flask-socketio
+torrentp

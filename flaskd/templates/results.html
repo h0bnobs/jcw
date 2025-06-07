@@ -1,19 +1,53 @@
 <!DOCTYPE html>
 <html>
-<head><title>Results for {{ query }}</title></head>
+<head>
+    <title>Results for {{ query }}</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
 <body>
 <h2>Results for "{{ query }}"</h2>
+<div id="progress-container" style="margin-top: 20px;">
+    <p>Download Progress:</p>
+    <progress id="progress-bar" value="0" max="100" style="width: 300px;"></progress>
+    <span id="progress-text">0%</span>
+</div>
 <ul>
     {% for torrent in results %}
     <li>
         <strong>{{ torrent.name }}</strong><br>
-        Seeders: {{ torrent.seeders }} | Leechers: {{ torrent.leechers }}<br>Size: {{ torrent.size }}<br>Uploader: {{ torrent.uploader }}<br>
-        <form action="/download-torrent"  method="get">
-            <input type="hidden" name="magnet" value="{{ torrent.magnet }}">
-            <button type="submit">Download</button>
-        </form>
+        Seeders: {{ torrent.seeders }} | Leechers: {{ torrent.leechers }}<br>
+        Size: {{ torrent.size }}<br>
+        Uploader: {{ torrent.uploader }}<br>
+
+        <button onclick="startDownload('{{ torrent.magnet }}', '{{ torrent.name }}')">Download</button>
     </li>
     {% endfor %}
 </ul>
+
+<script>
+    const socket = io();
+
+    function startDownload(magnet, name) {
+        // Reset UI
+        document.getElementById('progress-bar').value = 0;
+        document.getElementById('progress-text').innerText = '0%';
+
+        socket.emit('start_download', { magnet, name });
+    }
+
+    socket.on('torrent_progress', data => {
+        const progress = data.progress;
+        document.getElementById('progress-bar').value = progress;
+        document.getElementById('progress-text').innerText = `${progress}%`;
+    });
+
+    socket.on('torrent_complete', () => {
+        alert('Download complete!');
+    });
+
+    socket.on('torrent_error', data => {
+        alert('Download failed: ' + data.message);
+    });
+</script>
 </body>
 </html>

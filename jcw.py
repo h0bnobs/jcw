@@ -1,4 +1,4 @@
-from flaskd.app import app
+from flaskd.app import app, socketio
 from src.check_torrent_api import check_torrent_api_running, start_torrent_api
 
 if __name__ == '__main__':
@@ -8,4 +8,4 @@ if __name__ == '__main__':
     if not check_torrent_api_running():
         start_torrent_api()
 
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True, allow_unsafe_werkzeug=True)
