@@ -9,4 +9,3 @@ gunicorn
 mangum
 uvicorn[standard]
 flask-socketio
-torrentp
