@@ -1,7 +1,7 @@
 import asyncio
 import os
 
-from src.torrentp.torrentp import TorrentDownloader
+from src.local_torrent import TorrentDownloader
 from src.check_vpn import is_vpn
 
 async def monitor_progress(downloader, sid, socketio):
