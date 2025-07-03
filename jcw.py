@@ -1,5 +1,5 @@
 from flaskd.app import app, socketio
-from src.check_torrent_api import check_torrent_api_running, start_torrent_api
+from src.download_torrents.check_torrent_api import check_torrent_api_running, start_torrent_api
 
 if __name__ == '__main__':
 

@@ -1,8 +1,8 @@
 from flask import Flask, render_template, request
 
-from flask_socketio import SocketIO, emit
-from src.download_torrent import download_torrent
-from src.query_torrent_api import search_for_torrent
+from flask_socketio import SocketIO
+from src.download_torrents.download_torrent import download_torrent
+from src.download_torrents.query_torrent_api import search_for_torrent
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 socketio = SocketIO(app)

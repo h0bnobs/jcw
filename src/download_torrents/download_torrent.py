@@ -2,7 +2,7 @@ import asyncio
 import os
 
 from src.local_torrent import TorrentDownloader
-from src.check_vpn import is_vpn
+from src.download_torrents.check_vpn import is_vpn
 
 async def monitor_progress(downloader, sid, socketio):
     while True:
@@ -16,7 +16,7 @@ async def monitor_progress(downloader, sid, socketio):
 
 def download_torrent(magnet_link: str, download_path: str, torrent_name: str, sid=None, socketio=None) -> str:
     if not is_vpn():
-        raise RuntimeError("VPN is not enabled.")
+        raise RuntimeError("Please turn a VPN on.")
 
     downloader = TorrentDownloader(magnet_link, download_path)
 

@@ -1,6 +1,6 @@
 import requests
 
-from src.check_torrent_api import check_torrent_api_running
+from src.download_torrents.check_torrent_api import check_torrent_api_running
 
 
 class TorrentResult:
