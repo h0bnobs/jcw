@@ -9,3 +9,6 @@ gunicorn
 mangum
 uvicorn[standard]
 flask-socketio
+pytest
+asyncclick
+libtorrent
