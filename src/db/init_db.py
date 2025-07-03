@@ -30,11 +30,23 @@ def initialise_database() -> Connection:
 
 
 def add_torrent(con: Connection, name: str, magnet: str, size: Optional[str]) -> None:
+    """
+    Add a new torrent to the queue.
+    :param con: SQLite database connection.
+    :param name: Name of the torrent.
+    :param magnet: Magnet link of the torrent.
+    :param size: Size of the torrent (e.g., '2.1 GB').
+    """
     con.execute("INSERT INTO torrents (name, magnet, size, status) VALUES (?, ?, ?, 'queued')", (name, magnet, size))
     con.commit()
 
 
 def get_current_download(con: Connection) -> Optional[Dict[str, Any]]:
+    """
+    Retrieve the torrent currently being downloaded.
+    :param con: SQLite database connection.
+    :return: Dictionary with torrent details or None if none are downloading.
+    """
     cur = con.cursor()
     cur.execute("SELECT * FROM torrents WHERE status = 'downloading' LIMIT 1")
     row = cur.fetchone()
@@ -42,6 +54,11 @@ def get_current_download(con: Connection) -> Optional[Dict[str, Any]]:
 
 
 def get_next_in_queue(con: Connection) -> Optional[Dict[str, Any]]:
+    """
+    Get the next torrent in the queue (earliest added).
+    :param con: SQLite database connection.
+    :return: Dictionary with torrent details or None if queue is empty.
+    """
     cur = con.cursor()
     cur.execute("SELECT * FROM torrents WHERE status = 'queued' ORDER BY added_at ASC LIMIT 1")
     row = cur.fetchone()
@@ -49,6 +66,11 @@ def get_next_in_queue(con: Connection) -> Optional[Dict[str, Any]]:
 
 
 def get_last_completed(con: Connection) -> Optional[Dict[str, Any]]:
+    """
+    Retrieve the most recently completed torrent.
+    :param con: SQLite database connection.
+    :return: Dictionary with torrent details or None if no completed torrents exist.
+    """
     cur = con.cursor()
     cur.execute("SELECT * FROM torrents WHERE status = 'completed' ORDER BY completed_at DESC LIMIT 1")
     row = cur.fetchone()
@@ -56,6 +78,11 @@ def get_last_completed(con: Connection) -> Optional[Dict[str, Any]]:
 
 
 def get_time_started(con: Connection) -> Optional[str]:
+    """
+    Get the start time of the torrent currently being downloaded.
+    :param con: SQLite database connection.
+    :return: Timestamp as a string or None if no torrent is downloading.
+    """
     cur = con.cursor()
     cur.execute("SELECT started_at FROM torrents WHERE status = 'downloading' LIMIT 1")
     result = cur.fetchone()
@@ -63,27 +90,54 @@ def get_time_started(con: Connection) -> Optional[str]:
 
 
 def update_progress(con: Connection, torrent_id: int, progress: int) -> None:
+    """
+    Update the download progress of a torrent.
+    :param con: SQLite database connection.
+    :param torrent_id: ID of the torrent.
+    :param progress: New progress value (0–100).
+    """
     con.execute("UPDATE torrents SET progress = ? WHERE id = ?", (progress, torrent_id))
     con.commit()
 
 
 def mark_as_downloading(con: Connection, torrent_id: int) -> None:
+    """
+    Mark a torrent as currently downloading and set the start time.
+    :param con: SQLite database connection.
+    :param torrent_id: ID of the torrent to mark as downloading.
+    """
     con.execute("UPDATE torrents SET status = 'downloading', started_at = CURRENT_TIMESTAMP WHERE id = ?", (torrent_id,))
     con.commit()
 
 
 def mark_as_completed(con: Connection, torrent_id: int) -> None:
+    """
+    Mark a torrent as completed and set the completion time and progress to 100%.
+    :param con: SQLite database connection.
+    :param torrent_id: ID of the torrent to mark as completed.
+    """
     con.execute("UPDATE torrents SET status = 'completed', completed_at = CURRENT_TIMESTAMP, progress = 100 WHERE id = ?", (torrent_id,))
     con.commit()
 
 
 def get_all_queued(con: Connection) -> List[Dict[str, Any]]:
+    """
+    Retrieve all torrents currently in the queue.
+    :param con: SQLite database connection.
+    :return: List of dictionaries, each representing a queued torrent.
+    """
     cur = con.cursor()
     cur.execute("SELECT * FROM torrents WHERE status = 'queued' ORDER BY added_at ASC")
     return [dict_from_row(cur, row) for row in cur.fetchall()]
 
 
 def get_all_completed(con, limit: int = 10) -> List[Dict[str, Any]]:
+    """
+    Retrieve a list of recently completed torrents, ordered by completion time.
+    :param con: SQLite database connection.
+    :param limit: Maximum number of completed torrents to return.
+    :return: List of dictionaries, each representing a completed torrent.
+    """
     cur = con.cursor()
     cur.execute("""
         SELECT * FROM torrents
@@ -96,12 +150,23 @@ def get_all_completed(con, limit: int = 10) -> List[Dict[str, Any]]:
 
 
 def get_all(con: Connection) -> List[Dict[str, Any]]:
+    """
+    Retrieve all torrents in the database, ordered by time added (most recent first).
+    :param con: SQLite database connection.
+    :return: List of all torrent records as dictionaries.
+    """
     cur = con.cursor()
     cur.execute("SELECT * FROM torrents ORDER BY added_at DESC")
     return [dict_from_row(cur, row) for row in cur.fetchall()]
 
 
 def dict_from_row(cur, row) -> Optional[Dict[str, Any]]:
+    """
+    Convert a raw database row into a dictionary.
+    :param cur: SQLite cursor with description of columns.
+    :param row: Tuple containing row values.
+    :return: Dictionary of column names to values, or None if row is None.
+    """
     if row is None:
         return None
     return {description[0]: value for description, value in zip(cur.description, row)}
