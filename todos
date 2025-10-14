@@ -6,3 +6,6 @@ automatically stop seeding once downloaded
 filters in results page. Let user type in a season number "filter by season?" then take that number, add "S0" in front. Do the same with episode.
 add hyperlink to download location folder on active and recently finished downloads.
 cleanup requirements
+a "qbitorrent is not running" popup / if its not running open it quietly
+a "web ui not enabled" popup / dont think it can be enabled quietly by us
+look into using makefile to make it run automatically on mac / or make a binary for user
