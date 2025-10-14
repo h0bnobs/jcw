@@ -1,15 +1,17 @@
 import time
 from qbittorrent import Client
 from flask import Flask, render_template, request, redirect, session
+from threading import Event
 
 from flask_socketio import SocketIO
-from src.qbt.download_torrent import download_torrent
+from src.qbt.download_torrent import download_torrent, is_vpn
 from src.qbt.find_torrents import get_torrents
 from src.qbt.torrent_download_status import get_active_downloads
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 app.secret_key = 'your_secret_key'
 socketio = SocketIO(app)
+
 
 @app.route('/')
 def home():
@@ -27,19 +29,18 @@ def search():
     results = get_torrents(query)
     return render_template('results.html', results=results, query=query)
 
+
 @app.route('/download-torrent', methods=['GET'])
 def download():
+    if not is_vpn():
+        return "<script>alert('VPN is not active!'); window.history.back();</script>"
     download_torrent(request.args.get('magnet'), '.', request.args.get('name'))
     query = session.get('query', '')
     return redirect(f'/search?query={query}')
 
+
 @app.route('/downloads', methods=['GET', 'POST'])
 def downloads():
-    active_downloads = get_active_downloads()
-    # filter out irrelevant info, and convert to clearer values
-    # speed: 9384459
-    # progress: 0.5536684098026253
-    # eta: 33
     active_downloads = [
         {
             'content_path': d['content_path'],
@@ -49,13 +50,12 @@ def downloads():
         }
         for d in get_active_downloads()
     ]
-
     return render_template('downloads.html', active_downloads=active_downloads)
 
-from threading import Thread, Event
 
 thread = None
 thread_stop_event = Event()
+
 
 def background_download_status():
     """Send active downloads to all clients every 1 second."""

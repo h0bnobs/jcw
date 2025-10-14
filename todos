@@ -1,1 +1,7 @@
 make "next page" button work
+"view active and recently completed downloads" button. get recently completed from date modified in os.listdir or something
+delete button
+let user select download location
+automatically stop seeding once downloaded
+filters in results page. Let user type in a season number "filter by season?" then take that number, add "S0" in front. Do the same with episode.
+add hyperlink to download location folder on active and recently finished downloads.
