@@ -6,11 +6,6 @@
 </head>
 <body>
 <h2>Results for "{{ query }}"</h2>
-<div id="progress-container" style="margin-top: 20px;">
-    <p>Download Progress:</p>
-    <progress id="progress-bar" value="0" max="100" style="width: 300px;"></progress>
-    <span id="progress-text">0%</span>
-</div>
 <ul>
     {% for torrent in results %}
     <li>
@@ -24,7 +19,7 @@
             <input type="hidden" name="name" value="{{ torrent.name }}">
             <button type="submit">Download</button>
         </form>
-    </li>
+    </li><br>
     {% endfor %}
 </ul>
 <form action="/search" method="POST">
