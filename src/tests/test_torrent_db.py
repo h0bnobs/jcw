@@ -3,7 +3,7 @@ import time
 
 import pytest
 
-from src.db.init_db import (
+from src.db.db import (
     add_torrent,
     get_all_queued,
     get_next_in_queue,

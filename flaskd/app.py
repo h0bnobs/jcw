@@ -1,10 +1,13 @@
-from flask import Flask, render_template, request
+import time
+from qbittorrent import Client
+from flask import Flask, render_template, request, redirect, session
 
 from flask_socketio import SocketIO
-from src.download_torrents.download_torrent import download_torrent
-from src.download_torrents.query_torrent_api import search_for_torrent
+from src.qbt.download_torrent import download_torrent
+from src.qbt.find_torrents import get_torrents
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
+app.secret_key = 'your_secret_key'
 socketio = SocketIO(app)
 
 @app.route('/')
@@ -18,26 +21,17 @@ def search():
     if not query:
         return "No query provided", 400
 
-    results = search_for_torrent(query)
+    session['query'] = query
+
+    results = get_torrents(query)
     return render_template('results.html', results=results, query=query)
 
 @app.route('/download-torrent', methods=['GET'])
 def download():
     download_torrent(request.args.get('magnet'), '.', request.args.get('name'))
+    query = session.get('query', '')
+    return redirect(f'/search?query={query}')
 
-import threading
-
-@socketio.on('start_download')
-def handle_start_download(data):
-    magnet = data.get('magnet')
-    name = data.get('name')
-    sid = request.sid
-
-    def run_download():
-        try:
-            download_torrent(magnet, '.', name, sid=sid, socketio=socketio)
-            socketio.emit('torrent_complete', {'message': 'Download complete'}, to=sid)
-        except Exception as e:
-            socketio.emit('torrent_error', {'message': str(e)}, to=sid)
-
-    threading.Thread(target=run_download).start()
+@app.route('/downloads', methods=['GET', 'POST'])
+def downloads():
+    

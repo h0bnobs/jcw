@@ -8,7 +8,7 @@ def initialise_database() -> Connection:
     if "torrents.db" in os.listdir(os.getcwd()):
         return sqlite3.connect("torrents.db")
     else:
-        con = sqlite3.connect("torrents.db")
+        con = sqlite3.connect("torrents.db", check_same_thread=False)
         cur = con.cursor()
         cur.execute("""
         CREATE TABLE IF NOT EXISTS torrents (
@@ -28,17 +28,22 @@ def initialise_database() -> Connection:
         con.commit()
         return con
 
+def get_connection() -> Connection:
+    """
+    Get a connection to the SQLite database.
+    :return: SQLite connection object.
+    """
+    return sqlite3.connect("torrents.db", check_same_thread=False)
 
-def add_torrent(con: Connection, name: str, magnet: str, size: Optional[str]) -> None:
-    """
-    Add a new torrent to the queue.
-    :param con: SQLite database connection.
-    :param name: Name of the torrent.
-    :param magnet: Magnet link of the torrent.
-    :param size: Size of the torrent (e.g., '2.1 GB').
-    """
-    con.execute("INSERT INTO torrents (name, magnet, size, status) VALUES (?, ?, ?, 'queued')", (name, magnet, size))
+def add_torrent(con: Connection, name: str, magnet: str, size: Optional[str]) -> int:
+    con = get_connection()
+    cur = con.cursor()
+    cur.execute(
+        "INSERT INTO torrents (name, magnet, size, status) VALUES (?, ?, ?, 'queued')",
+        (name, magnet, size),
+    )
     con.commit()
+    return cur.lastrowid
 
 
 def get_current_download(con: Connection) -> Optional[Dict[str, Any]]:

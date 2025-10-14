@@ -42,8 +42,7 @@ def locate_torrent_api() -> str | None:
     for path in possible_paths:
         if os.path.exists(path):
             return path
-    return None
-
+    raise FileNotFoundError("Torrent API executable not found in any of the possible paths. Please install it.")
 
 def download_torrent_api(installation_directory: str = os.getcwd()) -> None:
     """

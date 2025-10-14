@@ -19,35 +19,17 @@
         Size: {{ torrent.size }}<br>
         Uploader: {{ torrent.uploader }}<br>
 
-        <button onclick="startDownload('{{ torrent.magnet }}', '{{ torrent.name }}')">Download</button>
+        <form action="/download-torrent"  method="get">
+            <input type="hidden" name="magnet" value="{{ torrent.magnet }}">
+            <input type="hidden" name="name" value="{{ torrent.name }}">
+            <button type="submit">Download</button>
+        </form>
     </li>
     {% endfor %}
 </ul>
-
-<script>
-    const socket = io();
-
-    function startDownload(magnet, name) {
-        // Reset UI
-        document.getElementById('progress-bar').value = 0;
-        document.getElementById('progress-text').innerText = '0%';
-
-        socket.emit('start_download', { magnet, name });
-    }
-
-    socket.on('torrent_progress', data => {
-        const progress = data.progress;
-        document.getElementById('progress-bar').value = progress;
-        document.getElementById('progress-text').innerText = `${progress}%`;
-    });
-
-    socket.on('torrent_complete', () => {
-        alert('Download complete!');
-    });
-
-    socket.on('torrent_error', data => {
-        alert(data.message);
-    });
-</script>
+<form action="/search" method="POST">
+    <br>
+    <button type="submit">Next Page</button>
+</form>
 </body>
 </html>
