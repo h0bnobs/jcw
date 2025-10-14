@@ -12,3 +12,4 @@ flask-socketio
 pytest
 asyncclick
 libtorrent
+bs4

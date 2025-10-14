@@ -1,17 +1,20 @@
-from qbittorrent import Client
-import requests
 import json
+
+import requests
+from qbittorrent import Client
 
 qb = Client('http://localhost:9000/')
 qb.login()
+
 
 def get_ip_address() -> str:
     """
     Get the current public IP address of the machine.
     :return: Public IP address as a string.
     """
-    data = str(requests.get('http://checkip.dyndns.com/').text) #https doesnt work....?
+    data = str(requests.get('http://checkip.dyndns.com/').text)  # https doesnt work....?
     return data.split(': ')[-1].split('<')[0]
+
 
 def is_vpn() -> bool:
     """
@@ -24,7 +27,7 @@ def is_vpn() -> bool:
     data = json.loads(response.text)
     return data["security"]["vpn"]
 
+
 def download_torrent(magnet_link: str, download_path: str, torrent_name: str):
     qb.download_from_link(magnet_link, savepath="/home/max/PycharmProjects/jcw/tempdownloads/")
     return "/home/max/PycharmProjects/jcw/tempdownloads/"
-

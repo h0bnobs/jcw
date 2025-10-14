@@ -14,12 +14,13 @@
         Size: {{ torrent.size }}<br>
         Uploader: {{ torrent.uploader }}<br>
 
-        <form action="/download-torrent"  method="get">
+        <form action="/download-torrent" method="get">
             <input type="hidden" name="magnet" value="{{ torrent.magnet }}">
             <input type="hidden" name="name" value="{{ torrent.name }}">
             <button type="submit">Download</button>
         </form>
-    </li><br>
+    </li>
+    <br>
     {% endfor %}
 </ul>
 <form action="/search" method="POST">

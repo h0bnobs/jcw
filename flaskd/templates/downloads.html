@@ -6,28 +6,28 @@
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
 <body>
-    <h1>Active Downloads</h1>
-    <ul id="downloads-list"></ul>
+<h1>Active Downloads</h1>
+<ul id="downloads-list"></ul>
 
-    <script>
-        const socket = io();
+<script>
+    const socket = io();
 
-        // When the server sends download updates
-        socket.on('update_downloads', function(active_downloads) {
-            const list = document.getElementById('downloads-list');
-            list.innerHTML = ''; // Clear old items
+    // When the server sends download updates
+    socket.on('update_downloads', function (active_downloads) {
+        const list = document.getElementById('downloads-list');
+        list.innerHTML = ''; // Clear old items
 
-            active_downloads.forEach(d => {
-                const li = document.createElement('li');
-                li.innerHTML = `
+        active_downloads.forEach(d => {
+            const li = document.createElement('li');
+            li.innerHTML = `
                     <strong>location:</strong> ${d.content_path}<br>
                     <strong>speed:</strong> ${d.dlspeed.toFixed(2)} MB/s<br>
                     <strong>progress:</strong> ${d.progress}%<br>
                     <strong>eta:</strong> ${d.eta}s
                 `;
-                list.appendChild(li);
-            });
+            list.appendChild(li);
         });
-    </script>
+    });
+</script>
 </body>
 </html>

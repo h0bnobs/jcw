@@ -1,9 +1,8 @@
-import time
-from qbittorrent import Client
-from flask import Flask, render_template, request, redirect, session
 from threading import Event
 
+from flask import Flask, render_template, request, redirect, session
 from flask_socketio import SocketIO
+
 from src.qbt.download_torrent import download_torrent, is_vpn
 from src.qbt.find_torrents import get_torrents
 from src.qbt.torrent_download_status import get_active_downloads

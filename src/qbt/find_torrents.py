@@ -1,6 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
-import webbrowser
+
 
 def get_magnet_links(soup) -> list:
     magnets = []
@@ -21,6 +21,7 @@ def get_magnet_links(soup) -> list:
             magnets.append(magnet_link['href'])
     return magnets
 
+
 def get_torrent_names(soup) -> list:
     names = []
     table = soup.find('table', id='searchResult')
@@ -39,6 +40,7 @@ def get_torrent_names(soup) -> list:
         if torrent_name:
             names.append(torrent_name)
     return names
+
 
 def get_num_of_seeders(soup) -> list:
     seeders = []
@@ -59,6 +61,7 @@ def get_num_of_seeders(soup) -> list:
             seeders.append(int(seeder_count))
     return seeders
 
+
 def get_num_of_leechers(soup) -> list:
     leechers = []
     table = soup.find('table', id='searchResult')
@@ -77,6 +80,7 @@ def get_num_of_leechers(soup) -> list:
         if leecher_count.isdigit():
             leechers.append(int(leecher_count))
     return leechers
+
 
 def get_size_of_torrent(soup) -> list:
     sizes = []
@@ -97,6 +101,7 @@ def get_size_of_torrent(soup) -> list:
             sizes.append(size)
     return sizes
 
+
 def get_torrent_uploader(soup) -> list:
     sizes = []
     table = soup.find('table', id='searchResult')
@@ -116,7 +121,8 @@ def get_torrent_uploader(soup) -> list:
             sizes.append(size)
     return sizes
 
-#num of seeders, torrent leachers, torrent size and uploader are?
+
+# num of seeders, torrent leachers, torrent size and uploader are?
 def get_torrents(search_string: str) -> list:
     """
     Search The Pirate Bay for torrents matching the search string.
