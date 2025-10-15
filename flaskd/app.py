@@ -1,3 +1,6 @@
+import json
+import os
+
 from threading import Event
 
 from flask import Flask, render_template, request, redirect, session
@@ -10,11 +13,12 @@ from src.qbt.torrent_download_status import get_active_downloads
 app = Flask(__name__, static_folder="static", template_folder="templates")
 app.secret_key = 'your_secret_key'
 socketio = SocketIO(app)
+CONFIG_FILE = 'config.json'
 
 
 @app.route('/')
 def home():
-    return render_template('search.html')
+    return render_template('search.html', download_dir=session['download_dir'])
 
 
 @app.route('/search', methods=['GET'])
@@ -36,7 +40,8 @@ def search():
 def download():
     if not is_vpn():
         return "<script>alert('VPN is not active!'); window.history.back();</script>"
-    download_torrent(request.args.get('magnet'), '.', request.args.get('name'))
+    download_dir = session.get('download_dir', app.config['DOWNLOAD_DIR'])
+    download_torrent(request.args.get('magnet'), download_dir)
     query = session.get('query', '')
     return redirect(f'/search?query={query}')
 
@@ -79,3 +84,14 @@ def handle_connect():
     global thread
     if thread is None:
         thread = socketio.start_background_task(background_download_status)
+
+
+@app.route('/set-download-dir', methods=['POST'])
+def set_download_dir():
+    path = request.form.get('download_dir')
+    if not os.path.isdir(path):
+        return "Invalid directory", 400
+    with open(CONFIG_FILE, 'w') as f:
+        json.dump({'download_dir': path}, f)
+    session['download_dir'] = path
+    return redirect('/')

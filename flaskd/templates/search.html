@@ -1,14 +1,18 @@
 <!DOCTYPE html>
 <html>
 <body>
+<link rel="stylesheet" href="../static/css/search.css">
 <form action="/search" method="get">
     <p>Search for a series/episode/film:</p>
     <input type="text" name="query" placeholder="Search for a show or film" required>
     <button type="submit">Search</button>
-    <br>
-    <p>Please choose where the files will be downloaded to: Perhaps the Desktop!</p><input type="file"
-                                                                                           name="download_path"
-                                                                                           webkitdirectory directory>
 </form>
+    <br>
+    <p>Current downloads location directory:</p>
+    <form action="/set-download-dir" method="post">
+        <input type="text" name="download_dir" value="{{ download_dir }}" required>
+        <button type="submit">Change Directory</button>
+    </form>
+    <br>
 </body>
 </html>

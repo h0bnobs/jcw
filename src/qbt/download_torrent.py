@@ -28,6 +28,6 @@ def is_vpn() -> bool:
     return data["security"]["vpn"]
 
 
-def download_torrent(magnet_link: str, download_path: str, torrent_name: str):
-    qb.download_from_link(magnet_link, savepath="/home/max/PycharmProjects/jcw/tempdownloads/")
-    return "/home/max/PycharmProjects/jcw/tempdownloads/"
+def download_torrent(magnet_link: str, download_path: str):
+    qb.download_from_link(magnet_link, savepath=download_path)
+    return download_path
