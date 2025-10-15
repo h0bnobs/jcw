@@ -20,13 +20,16 @@ def home():
 @app.route('/search', methods=['GET'])
 def search():
     query = request.args.get('query')
+    page = int(request.args.get('page', 1))
+
     if not query:
         return "No query provided", 400
 
     session['query'] = query
+    session['page'] = page
 
-    results = get_torrents(query)
-    return render_template('results.html', results=results, query=query)
+    results = get_torrents(query, page=page)
+    return render_template('results.html', results=results, query=query, page=page)
 
 
 @app.route('/download-torrent', methods=['GET'])
@@ -57,7 +60,6 @@ thread_stop_event = Event()
 
 
 def background_download_status():
-    """Send active downloads to all clients every 1 second."""
     while not thread_stop_event.is_set():
         active_downloads = [
             {

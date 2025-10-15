@@ -6,6 +6,7 @@
 </head>
 <body>
 <h2>Results for "{{ query }}"</h2>
+<p>Page {{ page }}</p>
 <ul>
     {% for torrent in results %}
     <li>
@@ -23,9 +24,18 @@
     <br>
     {% endfor %}
 </ul>
-<form action="/search" method="POST">
-    <br>
-    <button type="submit">Next Page</button>
+<div style="display: flex; gap: 10px;">
+    <form action="/search" method="get">
+        <input type="hidden" name="query" value="{{ query }}">
+        <input type="hidden" name="page" value="{{ page - 1 }}">
+        <button type="submit" {% if page <= 1 %}disabled{% endif %}>Previous</button>
+    </form>
+    <form action="/search" method="get">
+        <input type="hidden" name="query" value="{{ query }}">
+        <input type="hidden" name="page" value="{{ page + 1 }}">
+        <button type="submit">Next</button>
+    </form>
+</div>
 </form>
 </body>
 </html>
