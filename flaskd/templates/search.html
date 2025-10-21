@@ -1,18 +1,24 @@
 <!DOCTYPE html>
 <html>
 <body>
+<img src="../static/img/ripley.png" alt="Logo" style="width:150px; height: 150px; position:absolute; top:0; right:0;">
 <link rel="stylesheet" href="../static/css/search.css">
 <form action="/search" method="get">
     <p>Search for a series/episode/film:</p>
     <input type="text" name="query" placeholder="Search for a show or film" required>
     <button type="submit">Search</button>
 </form>
-    <br>
-    <p>Current downloads location directory:</p>
-    <form action="/set-download-dir" method="post">
-        <input type="text" name="download_dir" value="{{ download_dir }}" required>
-        <button type="submit">Change Directory</button>
-    </form>
-    <br>
+<br>
+<p>Current downloads location directory:</p>
+<form action="/set-download-dir" method="post">
+    <input type="text" name="download_dir" value="{{ download_dir }}" required>
+    <button type="submit">Change Directory</button>
+</form>
+<br>
+<form action="/active-downloads" method="get">
+    <button type="submit">View active downloads</button>
+</form>
+<form action="/download-history" method="get">
+    <button type="submit">View download history</button>
 </body>
 </html>

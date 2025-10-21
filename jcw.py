@@ -16,7 +16,6 @@ if __name__ == '__main__':
         with open(CONFIG_FILE) as f:
             session_data = json.load(f)
         download_dir = session_data.get("download_dir", "")
-        print(download_dir)
         if download_dir == '':
             download_dir = default_config["download_dir"]
         with open(CONFIG_FILE, "w") as f:

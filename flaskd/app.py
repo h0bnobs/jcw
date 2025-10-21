@@ -1,11 +1,15 @@
 import json
 import os
+import subprocess
+import platform
+import sys
 
 from threading import Event
 
-from flask import Flask, render_template, request, redirect, session
+from flask import Flask, render_template, request, redirect, session, send_from_directory
 from flask_socketio import SocketIO
 
+from src.qbt.download_history import get_all_completed_downloads
 from src.qbt.download_torrent import download_torrent, is_vpn
 from src.qbt.find_torrents import get_torrents
 from src.qbt.torrent_download_status import get_active_downloads
@@ -18,11 +22,14 @@ CONFIG_FILE = 'config.json'
 
 @app.route('/')
 def home():
-    return render_template('search.html', download_dir=session['download_dir'])
+    download_dir = session.get('download_dir', app.config['DOWNLOAD_DIR'])
+    return render_template('search.html', download_dir=download_dir)
 
 
 @app.route('/search', methods=['GET'])
 def search():
+    if not is_vpn():
+        return "<script>alert('VPN is not active!'); window.history.back();</script>"
     query = request.args.get('query')
     page = int(request.args.get('page', 1))
 
@@ -46,9 +53,9 @@ def download():
     return redirect(f'/search?query={query}')
 
 
-@app.route('/downloads', methods=['GET', 'POST'])
-def downloads():
-    active_downloads = [
+@app.route('/active-downloads', methods=['GET', 'POST'])
+def active_downloads():
+    active = [
         {
             'content_path': d['content_path'],
             'dlspeed': int(d['dlspeed']) / 1000000,
@@ -57,7 +64,33 @@ def downloads():
         }
         for d in get_active_downloads()
     ]
-    return render_template('downloads.html', active_downloads=active_downloads)
+    return render_template('active-downloads.html', active_downloads=active)
+
+
+def open_media_file(file_path):
+    """
+    Gpt Special this\n
+    Open a media file using the default application based on the operating system.
+    :param file_path: Path to the media file to be opened.
+    :return: None
+    """
+    if platform.system().lower() == 'linux' or platform.system().lower() == 'darwin':
+        subprocess.Popen(['open', file_path])
+    elif platform.system().lower() == 'windows':
+        os.startfile(file_path)
+
+
+@app.route('/open/<path:filename>')
+def open_file(filename):
+    full_path = os.path.join(session['download_dir'], filename)
+    open_media_file(full_path)
+    return redirect('/download-history')
+
+
+@app.route('/download-history', methods=['GET', 'POST'])
+def download_history():
+    return render_template('download-history.html', download_dir=session['download_dir'],
+                           downloads=get_all_completed_downloads())
 
 
 thread = None
