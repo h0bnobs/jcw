@@ -5,12 +5,13 @@
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
 <body>
+<img src="../static/img/ripley.png" alt="Logo" style="width:150px; height: 150px; position:absolute; top:0; right:0;">
+<button onclick="location.href='/'">Home</button>
+<button onclick="location.href='/download-history'">Download History</button>
+<button onclick="location.href='/active-downloads'">Active Downloads</button>
+<button onclick="location.href='/open-folder/{{ download_dir }}'">Downloads Folder</button>
 <h2>Results for "{{ query }}"</h2>
-<div id="progress-container" style="margin-top: 20px;">
-    <p>Download Progress:</p>
-    <progress id="progress-bar" value="0" max="100" style="width: 300px;"></progress>
-    <span id="progress-text">0%</span>
-</div>
+<p>Page {{ page }}</p>
 <ul>
     {% for torrent in results %}
     <li>
@@ -19,35 +20,27 @@
         Size: {{ torrent.size }}<br>
         Uploader: {{ torrent.uploader }}<br>
 
-        <button onclick="startDownload('{{ torrent.magnet }}', '{{ torrent.name }}')">Download</button>
+        <form action="/download-torrent" method="get">
+            <input type="hidden" name="magnet" value="{{ torrent.magnet }}">
+            <input type="hidden" name="name" value="{{ torrent.name }}">
+            <button type="submit">Download</button>
+        </form>
     </li>
+    <br>
     {% endfor %}
 </ul>
-
-<script>
-    const socket = io();
-
-    function startDownload(magnet, name) {
-        // Reset UI
-        document.getElementById('progress-bar').value = 0;
-        document.getElementById('progress-text').innerText = '0%';
-
-        socket.emit('start_download', { magnet, name });
-    }
-
-    socket.on('torrent_progress', data => {
-        const progress = data.progress;
-        document.getElementById('progress-bar').value = progress;
-        document.getElementById('progress-text').innerText = `${progress}%`;
-    });
-
-    socket.on('torrent_complete', () => {
-        alert('Download complete!');
-    });
-
-    socket.on('torrent_error', data => {
-        alert('Download failed: ' + data.message);
-    });
-</script>
+<div style="display: flex; gap: 10px;">
+    <form action="/search" method="get">
+        <input type="hidden" name="query" value="{{ query }}">
+        <input type="hidden" name="page" value="{{ page - 1 }}">
+        <button type="submit" {% if page <= 1 %}disabled{% endif %}>Previous</button>
+    </form>
+    <form action="/search" method="get">
+        <input type="hidden" name="query" value="{{ query }}">
+        <input type="hidden" name="page" value="{{ page + 1 }}">
+        <button type="submit">Next</button>
+    </form>
+</div>
+</form>
 </body>
 </html>

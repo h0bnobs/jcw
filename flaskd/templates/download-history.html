@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Download History</title>
+</head>
+<body>
+<img src="../static/img/ripley.png" alt="Logo" style="width:150px; height: 150px; position:absolute; top:0; right:0;">
+<button onclick="location.href='/'">Home</button>
+<button onclick="location.href='/active-downloads'">Active Downloads</button>
+<button onclick="location.href='/open-folder/{{ download_dir }}'">Downloads Folder</button>
+<h2>Download history (most recent at the top)</h2>
+{% for download in downloads %}
+<div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+    <a href="/open/{{ download }}">{{ download }}</a>
+    <form action="/delete-file" method="post" style="margin: 0;">
+        <input type="hidden" name="filename" value="{{ download }}">
+        <button type="submit">Delete file</button>
+    </form>
+</div>
+{% endfor %}
+</body>
+</html>

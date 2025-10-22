@@ -1,0 +1,12 @@
+#upload-file-label, #upload-config-label, .upload-label {
+    display: inline;
+    text-decoration: underline;
+    color: black;
+    font-family: "Aeonik Pro", sans-serif;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+#file-input {
+    display: none;
+}

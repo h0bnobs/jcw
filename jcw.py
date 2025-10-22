@@ -1,11 +1,24 @@
 from flaskd.app import app, socketio
-from src.check_torrent_api import check_torrent_api_running, start_torrent_api
+import os
+import json
+
+CONFIG_FILE = 'config.json'
 
 if __name__ == '__main__':
-
-    # check if its running, if not try and find it on the system and start it.
-    # if not found on the system, download it from git and start it.
-    if not check_torrent_api_running():
-        start_torrent_api()
-
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True, allow_unsafe_werkzeug=True)
+    default_config = {
+        "download_dir": os.path.join(os.path.expanduser("~"), "Desktop")
+    }
+    if not os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, "w") as f:
+            json.dump(default_config, f, indent=4)
+        app.config['DOWNLOAD_DIR'] = default_config["download_dir"]
+    else:
+        with open(CONFIG_FILE) as f:
+            session_data = json.load(f)
+        download_dir = session_data.get("download_dir", "")
+        if download_dir == '':
+            download_dir = default_config["download_dir"]
+        with open(CONFIG_FILE, "w") as f:
+            json.dump({"download_dir": download_dir}, f, indent=4)
+        app.config['DOWNLOAD_DIR'] = download_dir
+    socketio.run(app, host='0.0.0.0', port=80, debug=True, allow_unsafe_werkzeug=True)
