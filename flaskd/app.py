@@ -89,8 +89,15 @@ def open_file(filename):
 
 @app.route('/download-history', methods=['GET', 'POST'])
 def download_history():
-    return render_template('download-history.html', download_dir=session['download_dir'],
-                           downloads=get_all_completed_downloads())
+    return render_template('download-history.html', download_dir=session['download_dir'], downloads=get_all_completed_downloads())
+
+@app.route('/delete-file', methods=['POST'])
+def delete_file():
+    filename = request.form.get('filename')
+    full_path = os.path.join(session['download_dir'], filename)
+    if os.path.exists(full_path):
+        os.remove(full_path)
+    return redirect('/download-history')
 
 
 thread = None

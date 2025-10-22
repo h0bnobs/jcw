@@ -1,5 +1,4 @@
-"view active and recently completed downloads" button. get recently completed from date modified in os.listdir or something
-delete button
+fix the requests.exceptions.ConnectionError: ('Connection aborted.', ConnectionResetError(104, 'Connection reset by peer')) when downloading a torrent
 let user select download location + display on main page
 automatically stop seeding once downloaded
 filters in results page. Let user type in a season number "filter by season?" then take that number, add "S0" in front. Do the same with episode.
