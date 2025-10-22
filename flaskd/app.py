@@ -40,7 +40,8 @@ def search():
     session['page'] = page
 
     results = get_torrents(query, page=page)
-    return render_template('results.html', results=results, query=query, page=page)
+    download_dir = session['download_dir']
+    return render_template('results.html', results=results, download_dir=download_dir, query=query, page=page)
 
 
 @app.route('/download-torrent', methods=['GET'])
@@ -64,28 +65,34 @@ def active_downloads():
         }
         for d in get_active_downloads()
     ]
-    return render_template('active-downloads.html', active_downloads=active)
+    download_dir = session['download_dir']
+    return render_template('active-downloads.html', active_downloads=active, download_dir=download_dir)
 
 
-def open_media_file(file_path):
+def open_file_or_folder(path):
     """
     Gpt Special this\n
     Open a media file using the default application based on the operating system.
-    :param file_path: Path to the media file to be opened.
+    :param path: Path to the media file to be opened.
     :return: None
     """
     if platform.system().lower() == 'linux' or platform.system().lower() == 'darwin':
-        subprocess.Popen(['open', file_path])
+        subprocess.Popen(['open', path])
     elif platform.system().lower() == 'windows':
-        os.startfile(file_path)
+        os.startfile(path)
 
 
 @app.route('/open/<path:filename>')
 def open_file(filename):
     full_path = os.path.join(session['download_dir'], filename)
-    open_media_file(full_path)
+    open_file_or_folder(full_path)
     return redirect('/download-history')
 
+
+@app.route('/open-folder/<path:foldername>')
+def open_folder(foldername):
+    open_file_or_folder(session['download_dir'])
+    return redirect(request.referrer)
 
 @app.route('/download-history', methods=['GET', 'POST'])
 def download_history():
