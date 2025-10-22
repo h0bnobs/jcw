@@ -13,7 +13,7 @@ from src.qbt.download_history import get_all_completed_downloads
 from src.qbt.download_torrent import download_torrent, is_vpn
 from src.qbt.find_torrents import get_torrents
 from src.qbt.torrent_download_status import get_active_downloads
-
+from src.qbt.remove_torrents import remove_completed_torrents
 app = Flask(__name__, static_folder="static", template_folder="templates")
 app.secret_key = 'your_secret_key'
 socketio = SocketIO(app)
@@ -135,3 +135,7 @@ def set_download_dir():
         json.dump({'download_dir': path}, f)
     session['download_dir'] = path
     return redirect('/')
+
+@app.before_request
+def remove_torrent():
+    remove_completed_torrents()

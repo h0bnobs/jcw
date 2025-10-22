@@ -1,7 +1,5 @@
-fix the requests.exceptions.ConnectionError: ('Connection aborted.', ConnectionResetError(104, 'Connection reset by peer')) when downloading a torrent
-let user select download location + display on main page
-automatically stop seeding once downloaded
 filters in results page. Let user type in a season number "filter by season?" then take that number, add "S0" in front. Do the same with episode.
+stop downloading button in active downloads page
 add hyperlink to download location folder on active and recently finished downloads.
 cleanup requirements
 a "qbitorrent is not running" popup / if its not running open it quietly

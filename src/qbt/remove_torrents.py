@@ -8,5 +8,7 @@ prefs = {
 }
 qb.set_preferences(**prefs)
 
-def get_active_downloads() -> list:
-    return qb.torrents(filter='downloading')
+def remove_completed_torrents():
+    for t in qb.torrents():
+        if t['state'] == 'stoppedUP':
+            qb.delete(t['hash'])
