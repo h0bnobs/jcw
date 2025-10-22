@@ -1,19 +1,18 @@
 import json
 import os
-import subprocess
 import platform
-import sys
-
+import subprocess
 from threading import Event
 
-from flask import Flask, render_template, request, redirect, session, send_from_directory
+from flask import Flask, render_template, request, redirect, session
 from flask_socketio import SocketIO
 
 from src.qbt.download_history import get_all_completed_downloads
 from src.qbt.download_torrent import download_torrent, is_vpn
 from src.qbt.find_torrents import get_torrents
-from src.qbt.torrent_download_status import get_active_downloads
 from src.qbt.remove_torrents import remove_completed_torrents
+from src.qbt.torrent_download_status import get_active_downloads
+
 app = Flask(__name__, static_folder="static", template_folder="templates")
 app.secret_key = 'your_secret_key'
 socketio = SocketIO(app)
@@ -94,9 +93,12 @@ def open_folder(foldername):
     open_file_or_folder(session['download_dir'])
     return redirect(request.referrer)
 
+
 @app.route('/download-history', methods=['GET', 'POST'])
 def download_history():
-    return render_template('download-history.html', download_dir=session['download_dir'], downloads=get_all_completed_downloads())
+    return render_template('download-history.html', download_dir=session['download_dir'],
+                           downloads=get_all_completed_downloads())
+
 
 @app.route('/delete-file', methods=['POST'])
 def delete_file():
@@ -142,6 +144,7 @@ def set_download_dir():
         json.dump({'download_dir': path}, f)
     session['download_dir'] = path
     return redirect('/')
+
 
 @app.before_request
 def remove_torrent():

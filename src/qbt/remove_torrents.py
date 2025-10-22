@@ -8,6 +8,7 @@ prefs = {
 }
 qb.set_preferences(**prefs)
 
+
 def remove_completed_torrents():
     for t in qb.torrents():
         if t['state'] == 'stoppedUP':

@@ -1,5 +1,7 @@
-from flask import session
 import os
+
+from flask import session
+
 
 def is_video_file(filename: str) -> bool:
     """
@@ -9,6 +11,7 @@ def is_video_file(filename: str) -> bool:
     """
     video_extensions = {"mp4", "mkv", "avi", "mov", "wmv", "flv"}
     return filename.lower().rsplit(".", 1)[-1] in video_extensions
+
 
 def get_all_completed_downloads() -> list:
     """

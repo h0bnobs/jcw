@@ -122,7 +122,7 @@ def get_torrent_uploader(soup) -> list:
     return sizes
 
 
-def get_torrents(search_string: str, page : int = 1) -> list:
+def get_torrents(search_string: str, page: int = 1) -> list:
     """
     Search The Pirate Bay for torrents matching the search string.
     :param search_string: Simple show/film to search for.

@@ -8,5 +8,6 @@ prefs = {
 }
 qb.set_preferences(**prefs)
 
+
 def get_active_downloads() -> list:
     return qb.torrents(filter='downloading')

@@ -1,6 +1,7 @@
-from flaskd.app import app, socketio
-import os
 import json
+import os
+
+from flaskd.app import app, socketio
 
 CONFIG_FILE = 'config.json'
 

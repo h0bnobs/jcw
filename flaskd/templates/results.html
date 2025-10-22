@@ -33,7 +33,8 @@
     <form action="/search" method="get">
         <input type="hidden" name="query" value="{{ query }}">
         <input type="hidden" name="page" value="{{ page - 1 }}">
-        <button type="submit" {% if page <= 1 %}disabled{% endif %}>Previous</button>
+        <button type="submit" {% if page
+        <= 1 %}disabled{% endif %}>Previous</button>
     </form>
     <form action="/search" method="get">
         <input type="hidden" name="query" value="{{ query }}">
