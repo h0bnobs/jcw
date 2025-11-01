@@ -1,13 +1,18 @@
 import json
 import os
+import argparse
 
 from flaskd.app import app, socketio
 
 CONFIG_FILE = 'config.json'
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="JCW Application")
+    parser.add_argument('--vpn-bypass', action='store_true', help="Bypass VPN check")
+    args = parser.parse_args()
     default_config = {
-        "download_dir": os.path.join(os.path.expanduser("~"), "Desktop")
+        "download_dir": os.path.join(os.path.expanduser("~"), "Desktop"),
+        "vpn_bypass": args.vpn_bypass
     }
     if not os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, "w") as f:

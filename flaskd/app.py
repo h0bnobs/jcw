@@ -27,7 +27,8 @@ def home():
 
 @app.route('/search', methods=['GET'])
 def search():
-    if not is_vpn():
+    vpn_bypass = session.get("vpn_bypass", False)
+    if not vpn_bypass and not is_vpn():
         return "<script>alert('VPN is not active!'); window.history.back();</script>"
     query = request.args.get('query')
     page = int(request.args.get('page', 1))
@@ -45,7 +46,8 @@ def search():
 
 @app.route('/download-torrent', methods=['GET'])
 def download():
-    if not is_vpn():
+    vpn_bypass = session.get("vpn_bypass", False)
+    if not vpn_bypass and not is_vpn():
         return "<script>alert('VPN is not active!'); window.history.back();</script>"
     download_dir = session.get('download_dir', app.config['DOWNLOAD_DIR'])
     download_torrent(request.args.get('magnet'), download_dir)
