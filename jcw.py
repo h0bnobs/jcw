@@ -27,4 +27,5 @@ if __name__ == '__main__':
         with open(CONFIG_FILE, "w") as f:
             json.dump({"download_dir": download_dir}, f, indent=4)
         app.config['DOWNLOAD_DIR'] = download_dir
+    app.config['VPN_BYPASS'] = args.vpn_bypass
     socketio.run(app, host='0.0.0.0', port=80, debug=True, allow_unsafe_werkzeug=True)

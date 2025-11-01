@@ -22,12 +22,12 @@ CONFIG_FILE = 'config.json'
 @app.route('/')
 def home():
     download_dir = session.get('download_dir', app.config['DOWNLOAD_DIR'])
-    return render_template('search.html', download_dir=download_dir)
+    return render_template('search.html', download_dir=download_dir, vpn_bypass=app.config.get("VPN_BYPASS", False))
 
 
 @app.route('/search', methods=['GET'])
 def search():
-    vpn_bypass = session.get("vpn_bypass", False)
+    vpn_bypass = app.config.get("VPN_BYPASS", False)
     if not vpn_bypass and not is_vpn():
         return "<script>alert('VPN is not active!'); window.history.back();</script>"
     query = request.args.get('query')
@@ -46,7 +46,7 @@ def search():
 
 @app.route('/download-torrent', methods=['GET'])
 def download():
-    vpn_bypass = session.get("vpn_bypass", False)
+    vpn_bypass = app.config.get("VPN_BYPASS", False)
     if not vpn_bypass and not is_vpn():
         return "<script>alert('VPN is not active!'); window.history.back();</script>"
     download_dir = session.get('download_dir', app.config['DOWNLOAD_DIR'])

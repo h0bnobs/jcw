@@ -8,6 +8,9 @@
     <input type="text" name="query" placeholder="Search for a show or film" required>
     <button type="submit">Search</button>
 </form>
+{% if vpn_bypass %}
+<p style="color:red;">VPN check bypass is active.</p>
+{% endif %}
 <br>
 <p>Current downloads location directory:</p>
 <form action="/set-download-dir" method="post">
