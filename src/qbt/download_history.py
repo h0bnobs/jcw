@@ -1,8 +1,5 @@
 import os
 
-from flask import app
-
-
 def is_video_file(filename: str) -> bool:
     """
     Check if the file has a video extension.
