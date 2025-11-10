@@ -29,6 +29,6 @@ def get_all_completed_downloads(download_dir: str = None) -> list:
     if download_dir:
         downloads = []
         for root, dirs, files in os.walk(download_dir):
-            downloads.extend([file for file in files if is_video_file(file)])
+            downloads.extend([os.path.relpath(os.path.join(root, file), download_dir) for file in files if is_video_file(file)])
         return downloads
     return []
