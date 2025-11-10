@@ -142,8 +142,17 @@ def set_download_dir():
     path = request.form.get('download_dir')
     if not os.path.isdir(path):
         return "Invalid directory", 400
+    # Read existing config
+    config = {}
+    if os.path.exists(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE, 'r') as f:
+                config = json.load(f)
+        except Exception:
+            config = {}
+    config['download_dir'] = path
     with open(CONFIG_FILE, 'w') as f:
-        json.dump({'download_dir': path}, f)
+        json.dump(config, f)
     app.config['DOWNLOAD_DIR'] = path
     return redirect('/')
 
