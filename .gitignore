@@ -1,6 +1,7 @@
 __pycache__/
 .idea
 .venv
+venv/
 src/db/torrents.db
 tempdownloads
 tempdownloads2

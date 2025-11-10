@@ -1,8 +1,5 @@
 import os
 
-from flask import session
-
-
 def is_video_file(filename: str) -> bool:
     """
     Check if the file has a video extension.
@@ -13,10 +10,15 @@ def is_video_file(filename: str) -> bool:
     return filename.lower().rsplit(".", 1)[-1] in video_extensions
 
 
-def get_all_completed_downloads() -> list:
+def get_all_completed_downloads(download_dir: str = None) -> list:
     """
-    Retrieve all completed downloads from the download directory.
+    Retrieve all completed downloads from the specified download directory.
+    :param download_dir: Path to the directory containing completed downloads. If None, returns an empty list.
     :return: List of completed downloads with relevant details.
     """
-    downloads = [file for file in os.listdir(session["download_dir"]) if is_video_file(file)]
-    return downloads
+    if download_dir:
+        downloads = []
+        for root, dirs, files in os.walk(download_dir):
+            downloads.extend([os.path.relpath(os.path.join(root, file), download_dir) for file in files if is_video_file(file)])
+        return downloads
+    return []

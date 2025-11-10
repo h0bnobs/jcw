@@ -21,7 +21,7 @@ CONFIG_FILE = 'config.json'
 
 @app.route('/')
 def home():
-    download_dir = session.get('download_dir', app.config['DOWNLOAD_DIR'])
+    download_dir = app.config['DOWNLOAD_DIR']
     return render_template('search.html', download_dir=download_dir, vpn_bypass=app.config.get("VPN_BYPASS", False))
 
 
@@ -40,7 +40,7 @@ def search():
     session['page'] = page
 
     results = get_torrents(query, page=page)
-    download_dir = session['download_dir']
+    download_dir = app.config['DOWNLOAD_DIR']
     return render_template('results.html', results=results, download_dir=download_dir, query=query, page=page)
 
 
@@ -49,7 +49,7 @@ def download():
     vpn_bypass = app.config.get("VPN_BYPASS", False)
     if not vpn_bypass and not is_vpn():
         return "<script>alert('VPN is not active!'); window.history.back();</script>"
-    download_dir = session.get('download_dir', app.config['DOWNLOAD_DIR'])
+    download_dir = app.config['DOWNLOAD_DIR']
     download_torrent(request.args.get('magnet'), download_dir)
     query = session.get('query', '')
     return redirect(f'/search?query={query}')
@@ -66,7 +66,7 @@ def active_downloads():
         }
         for d in get_active_downloads()
     ]
-    download_dir = session['download_dir']
+    download_dir = app.config['DOWNLOAD_DIR']
     return render_template('active-downloads.html', active_downloads=active, download_dir=download_dir)
 
 
@@ -85,27 +85,27 @@ def open_file_or_folder(path):
 
 @app.route('/open/<path:filename>')
 def open_file(filename):
-    full_path = os.path.join(session['download_dir'], filename)
+    full_path = os.path.join(app.config['DOWNLOAD_DIR'], filename)
     open_file_or_folder(full_path)
     return redirect('/download-history')
 
 
 @app.route('/open-folder/<path:foldername>')
 def open_folder(foldername):
-    open_file_or_folder(session['download_dir'])
+    open_file_or_folder(app.config['DOWNLOAD_DIR'])
     return redirect(request.referrer)
 
 
 @app.route('/download-history', methods=['GET', 'POST'])
 def download_history():
-    return render_template('download-history.html', download_dir=session['download_dir'],
-                           downloads=get_all_completed_downloads())
+    return render_template('download-history.html', download_dir=app.config['DOWNLOAD_DIR'],
+                           downloads=get_all_completed_downloads(app.config['DOWNLOAD_DIR']))
 
 
 @app.route('/delete-file', methods=['POST'])
 def delete_file():
     filename = request.form.get('filename')
-    full_path = os.path.join(session['download_dir'], filename)
+    full_path = os.path.join(app.config['DOWNLOAD_DIR'], filename)
     if os.path.exists(full_path):
         os.remove(full_path)
     return redirect('/download-history')
@@ -142,9 +142,18 @@ def set_download_dir():
     path = request.form.get('download_dir')
     if not os.path.isdir(path):
         return "Invalid directory", 400
+    # Read existing config
+    config = {}
+    if os.path.exists(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE, 'r') as f:
+                config = json.load(f)
+        except Exception:
+            config = {}
+    config['download_dir'] = path
     with open(CONFIG_FILE, 'w') as f:
-        json.dump({'download_dir': path}, f)
-    session['download_dir'] = path
+        json.dump(config, f)
+    app.config['DOWNLOAD_DIR'] = path
     return redirect('/')
 
 
