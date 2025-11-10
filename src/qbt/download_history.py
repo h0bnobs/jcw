@@ -22,7 +22,8 @@ def is_folder(path: str) -> bool:
 
 def get_all_completed_downloads(download_dir: str = None) -> list:
     """
-    Retrieve all completed downloads from the download directory.
+    Retrieve all completed downloads from the specified download directory.
+    :param download_dir: Path to the directory containing completed downloads. If None, returns an empty list.
     :return: List of completed downloads with relevant details.
     """
     if download_dir:
