@@ -46,7 +46,7 @@ body {
 }
 .results tbody tr:nth-child(even) { background: #fafafa }
 .col-name { width: 50% }
-.col-action { width: 120px; text-align: right }
+.col-action { width: 120px; text-align: left }
 .t-name { color: #06c }
 
 .btn-small {

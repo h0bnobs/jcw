@@ -11,13 +11,12 @@
 <header class="topbar">
     <a class="brand" href="/">
         <img src="../static/img/ripley.png" alt="Logo" class="logo">
-        <span class="title">ripley</span>
     </a>
     <nav class="nav">
         <a href="/">home</a>
-        <a href="/download-history">history</a>
-        <a href="/active-downloads">active</a>
-        <a href="/open-folder/{{ download_dir }}">downloads</a>
+        <a href="/download-history">download history</a>
+        <a href="/active-downloads">active downloads</a>
+        <a href="/open-folder/{{ download_dir }}">open downloads folder</a>
     </nav>
 </header>
 
@@ -51,7 +50,7 @@
                         <form action="/download-torrent" method="get">
                             <input type="hidden" name="magnet" value="{{ torrent.magnet }}">
                             <input type="hidden" name="name" value="{{ torrent.name }}">
-                            <button type="submit" class="btn-small">download</button>
+                            <button type="submit" class="btn-small">⬇️ download</button>
                         </form>
                     </td>
                 </tr>
@@ -75,7 +74,6 @@
 </main>
 
 <footer class="foot">
-    <p>ripley search results</p>
 </footer>
 </body>
 </html>

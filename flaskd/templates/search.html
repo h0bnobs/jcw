@@ -10,13 +10,13 @@
 <header class="topbar">
     <a class="brand" href="/">
         <img src="../static/img/ripley.png" alt="Logo" class="logo">
-        <span class="title">ripley</span>
+        <span class="title">Download Anything</span>
     </a>
     <nav class="nav">
         <a href="/">home</a>
-        <a href="/download-history">history</a>
-        <a href="/active-downloads">active</a>
-        <a href="/open-folder/{{ download_dir }}">downloads</a>
+        <a href="/download-history">download history</a>
+        <a href="/active-downloads">active downloads</a>
+        <a href="/open-folder/{{ download_dir }}">open downloads folder</a>
     </nav>
 </header>
 
@@ -39,18 +39,11 @@
         <form action="/set-download-dir" method="post" class="inline-form">
             <input type="text" name="download_dir" value="{{ download_dir }}" required>
             <button type="submit" class="btn">change directory</button>
-            <a class="btn-link" href="/open-folder/{{ download_dir }}">open downloads folder</a>
         </form>
-    </section>
-
-    <section class="links">
-        <a class="btn-link" href="/active-downloads">view active downloads</a>
-        <a class="btn-link" href="/download-history">view download history</a>
     </section>
 </main>
 
 <footer class="foot">
-    <p>ripley search</p>
 </footer>
 </body>
 </html>
