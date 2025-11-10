@@ -17,7 +17,7 @@
     <input type="text" name="download_dir" value="{{ download_dir }}" required>
     <button type="submit">Change Directory</button>
 </form>
-<button onclick="location.href='/open-folder/{{ download_dir }}'">Downloads Folder</button>
+<button onclick="location.href='/open-folder/{{ download_dir }}'">Open Downloads Folder</button>
 <br>
 <form action="/active-downloads" method="get">
     <button type="submit">View active downloads</button>

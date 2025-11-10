@@ -7,9 +7,10 @@
 <body>
 <img src="../static/img/ripley.png" alt="Logo" style="width:150px; height: 150px; position:absolute; top:0; right:0;">
 <button onclick="location.href='/'">Home</button>
-<button onclick="location.href='/active-downloads'">Active Downloads</button>
-<button onclick="location.href='/open-folder/{{ download_dir }}'">Downloads Folder</button>
+<button onclick="location.href='/active-downloads'">See Active Downloads</button>
+<button onclick="location.href='/open-folder/{{ download_dir }}'">Open Downloads Folder</button>
 <h2>Download history (most recent at the top)</h2>
+<h4>Click the link to open the file</h4>
 {% for download in downloads %}
 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
     <a href="/open/{{ download }}">{{ download }}</a>
