@@ -191,7 +191,7 @@ def fix_directory():
     :return: None
     """
     subprocess.run(['chown', '-R', 'jellyfin:jellyfin', '/media'])
-    return subprocess.run(['ls', '-al', '/media'], capture_output=True, text=True).stdout + '<br><a href="/">Go Back</a>'
+    return subprocess.run(['ls', '-al', '/media'], capture_output=True, text=True).stdout.replace('\n', '<br>') + '<br><a href="/">Go Back</a>'
 
 
 @app.before_request
