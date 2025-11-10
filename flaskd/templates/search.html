@@ -1,28 +1,56 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Ripley Search</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="../static/css/search.css">
+</head>
 <body>
-<img src="../static/img/ripley.png" alt="Logo" style="width:150px; height: 150px; position:absolute; top:0; right:0;">
-<link rel="stylesheet" href="../static/css/search.css">
-<form action="/search" method="get">
-    <p>Search for a series/episode/film:</p>
-    <input type="text" name="query" placeholder="Search for a show or film" required>
-    <button type="submit">Search</button>
-</form>
-{% if vpn_bypass %}
-<p style="color:red;">VPN check bypass is active.</p>
-{% endif %}
-<br>
-<p>Current downloads location directory:</p>
-<form action="/set-download-dir" method="post">
-    <input type="text" name="download_dir" value="{{ download_dir }}" required>
-    <button type="submit">Change Directory</button>
-</form>
-<button onclick="location.href='/open-folder/{{ download_dir }}'">Open Downloads Folder</button>
-<br>
-<form action="/active-downloads" method="get">
-    <button type="submit">View active downloads</button>
-</form>
-<form action="/download-history" method="get">
-    <button type="submit">View download history</button>
+<header class="topbar">
+    <a class="brand" href="/">
+        <img src="../static/img/ripley.png" alt="Logo" class="logo">
+        <span class="title">ripley</span>
+    </a>
+    <nav class="nav">
+        <a href="/">home</a>
+        <a href="/download-history">history</a>
+        <a href="/active-downloads">active</a>
+        <a href="/open-folder/{{ download_dir }}">downloads</a>
+    </nav>
+</header>
+
+<main class="wrap">
+    <section class="searchbox">
+        <form action="/search" method="get" class="search-form">
+            <label for="query" class="prompt">search for a series episode film</label>
+            <div class="row">
+                <input id="query" type="text" name="query" placeholder="search for a show or film" required>
+                <button type="submit" class="btn">search</button>
+            </div>
+        </form>
+        {% if vpn_bypass %}
+        <p class="notice notice-danger">vpn check bypass is active.</p>
+        {% endif %}
+    </section>
+
+    <section class="panel">
+        <h3>current downloads location</h3>
+        <form action="/set-download-dir" method="post" class="inline-form">
+            <input type="text" name="download_dir" value="{{ download_dir }}" required>
+            <button type="submit" class="btn">change directory</button>
+            <a class="btn-link" href="/open-folder/{{ download_dir }}">open downloads folder</a>
+        </form>
+    </section>
+
+    <section class="links">
+        <a class="btn-link" href="/active-downloads">view active downloads</a>
+        <a class="btn-link" href="/download-history">view download history</a>
+    </section>
+</main>
+
+<footer class="foot">
+    <p>ripley search</p>
+</footer>
 </body>
 </html>
