@@ -9,13 +9,6 @@ def is_video_file(filename: str) -> bool:
     video_extensions = {"mp4", "mkv", "avi", "mov", "wmv", "flv"}
     return filename.lower().rsplit(".", 1)[-1] in video_extensions
 
-def is_folder(path: str) -> bool:
-    """
-    Check if the given path is a folder.
-    :param path: Path to check.
-    :return: True if the path is a folder, False otherwise.
-    """
-    return os.path.isdir(path)
 
 def get_all_completed_downloads(download_dir: str = None) -> list:
     """
