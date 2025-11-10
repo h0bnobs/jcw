@@ -190,8 +190,8 @@ def fix_directory():
     Hardcoded chown for my personal jellyfin media directory
     :return: None
     """
-    subprocess.run('chown -R jellyfin:jellyfin /media')
-    return subprocess.run('ls -al /media').stdout.decode('utf-8') + '<br><a href="/">Go Back</a>'
+    subprocess.run(['chown', '-R', 'jellyfin:jellyfin', '/media'])
+    return subprocess.run(['ls', '-al', '/media'], capture_output=True, text=True).stdout + '<br><a href="/">Go Back</a>'
 
 
 @app.before_request
