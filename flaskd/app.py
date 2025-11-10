@@ -184,6 +184,10 @@ def remote_empty_directories_in_download_dir(download_dir) -> None:
             if not os.listdir(dir_path):
                 os.rmdir(dir_path)
 
+@app.route('/qbit', methods=['GET'])
+def redirect_to_qbittorrent():
+    return redirect('http://localhost:9000')
+
 @app.route('/jellyfin', methods=['GET'])
 def fix_directory():
     """
