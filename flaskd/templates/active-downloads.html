@@ -27,7 +27,7 @@
                     <strong>location:</strong> ${d.content_path}<br>
                     <strong>speed:</strong> ${d.dlspeed.toFixed(2)} MB/s<br>
                     <strong>progress:</strong> ${d.progress}%<br>
-                    <strong>eta:</strong> ${d.eta}s
+                    <strong>eta:</strong> ${d.eta > 60 ? `${Math.floor(d.eta / 60)}:${(d.eta % 60).toString().padStart(2, '0')}` + "m" : `${d.eta}s`}
                 `;
             list.appendChild(li);
         });

@@ -6,8 +6,6 @@ a "web ui not enabled" popup / dont think it can be enabled quietly by us
 look into using makefile to make it run automatically on mac / or make a binary for user
 laptops going to be turned off probably - so gonna need to make it all all in one for a binary...
 current ip displayed would be nice (to check against mullvad ips in here https://raw.githubusercontent.com/maximko/mullvad-socks-list/list/mullvad-socks-list.txt)
-make it look like piratebay
 "advanced settings" for things like VPN check, jellyfin support
-    support for jellyfin servers (chown the downloaded files to the jellyfin user?)
-    vpn bypass in here?
     "server" or "headless" mode here? no "open downloads folder" or open downloads links
+fix mobile layout

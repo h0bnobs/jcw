@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<button onclick="location.href='/'">Home</button>
+<form method="POST" action="/advanced-settings">
+    <label>
+        <input type="checkbox" name="vpn_bypass" {% if vpn_bypass %}checked{% endif %}>
+        Enable VPN Bypass
+    </label>
+    <br>
+    <button type="submit">Save</button>
+</form>
+<button onclick="location.href='/jellyfin'">Fix Jellyfin Directory</button>
+</body>
+</html>

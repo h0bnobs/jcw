@@ -14,3 +14,4 @@ asyncclick
 libtorrent
 bs4
 python-qbittorrent
+psutil
