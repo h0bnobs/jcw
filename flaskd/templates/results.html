@@ -1,47 +1,79 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Results for {{ query }}</title>
+    <meta charset="utf-8">
+    <title>results for {{ query }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <link rel="stylesheet" href="../static/css/results.css">
 </head>
 <body>
-<img src="../static/img/ripley.png" alt="Logo" style="width:150px; height: 150px; position:absolute; top:0; right:0;">
-<button onclick="location.href='/'">Home</button>
-<button onclick="location.href='/download-history'">Download History</button>
-<button onclick="location.href='/active-downloads'">Active Downloads</button>
-<button onclick="location.href='/open-folder/{{ download_dir }}'">Downloads Folder</button>
-<h2>Results for "{{ query }}"</h2>
-<p>Page {{ page }}</p>
-<ul>
-    {% for torrent in results %}
-    <li>
-        <strong>{{ torrent.name }}</strong><br>
-        Seeders: {{ torrent.seeders }} | Leechers: {{ torrent.leechers }}<br>
-        Size: {{ torrent.size }}<br>
-        Uploader: {{ torrent.uploader }}<br>
+<header class="topbar">
+    <a class="brand" href="/">
+        <img src="../static/img/ripley.png" alt="Logo" class="logo">
+    </a>
+    <nav class="nav">
+        <a href="/">home</a>
+        <a href="/download-history">download history</a>
+        <a href="/active-downloads">active downloads</a>
+        <a href="/open-folder/{{ download_dir }}">open downloads folder</a>
+    </nav>
+</header>
 
-        <form action="/download-torrent" method="get">
-            <input type="hidden" name="magnet" value="{{ torrent.magnet }}">
-            <input type="hidden" name="name" value="{{ torrent.name }}">
-            <button type="submit">Download</button>
+<main class="wrap">
+    <h2 class="heading">results for "{{ query }}"</h2>
+    <p class="muted">page {{ page }}</p>
+
+    <div class="table-wrap">
+        <table class="results">
+            <thead>
+                <tr>
+                    <th class="col-name">name</th>
+                    <th>seed</th>
+                    <th>leech</th>
+                    <th>size</th>
+                    <th>uploader</th>
+                    <th class="col-action">action</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for torrent in results %}
+                <tr>
+                    <td class="col-name">
+                        <span class="t-name">{{ torrent.name }}</span>
+                    </td>
+                    <td>{{ torrent.seeders }}</td>
+                    <td>{{ torrent.leechers }}</td>
+                    <td>{{ torrent.size }}</td>
+                    <td>{{ torrent.uploader }}</td>
+                    <td class="col-action">
+                        <form action="/download-torrent" method="get">
+                            <input type="hidden" name="magnet" value="{{ torrent.magnet }}">
+                            <input type="hidden" name="name" value="{{ torrent.name }}">
+                            <button type="submit" class="btn-small">⬇️ download</button>
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="pager">
+        <form action="/search" method="get">
+            <input type="hidden" name="query" value="{{ query }}">
+            <input type="hidden" name="page" value="{{ page - 1 }}">
+            <button type="submit" class="btn" {% if page <= 1 %}disabled{% endif %}>previous</button>
         </form>
-    </li>
-    <br>
-    {% endfor %}
-</ul>
-<div style="display: flex; gap: 10px;">
-    <form action="/search" method="get">
-        <input type="hidden" name="query" value="{{ query }}">
-        <input type="hidden" name="page" value="{{ page - 1 }}">
-        <button type="submit" {% if page
-        <= 1 %}disabled{% endif %}>Previous</button>
-    </form>
-    <form action="/search" method="get">
-        <input type="hidden" name="query" value="{{ query }}">
-        <input type="hidden" name="page" value="{{ page + 1 }}">
-        <button type="submit">Next</button>
-    </form>
-</div>
-</form>
+        <form action="/search" method="get">
+            <input type="hidden" name="query" value="{{ query }}">
+            <input type="hidden" name="page" value="{{ page + 1 }}">
+            <button type="submit" class="btn">next</button>
+        </form>
+    </div>
+</main>
+
+<footer class="foot">
+</footer>
 </body>
 </html>
