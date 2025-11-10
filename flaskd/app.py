@@ -69,6 +69,27 @@ def active_downloads():
     download_dir = app.config['DOWNLOAD_DIR']
     return render_template('active-downloads.html', active_downloads=active, download_dir=download_dir)
 
+@app.route('/advanced-settings', methods=['GET', 'POST'])
+def advanced_settings():
+    if request.method == 'POST':
+        vpn_bypass = request.form.get('vpn_bypass') == 'on'
+        app.config['VPN_BYPASS'] = vpn_bypass
+
+        # Read existing config
+        config = {}
+        if os.path.exists(CONFIG_FILE):
+            try:
+                with open(CONFIG_FILE, 'r') as f:
+                    config = json.load(f)
+            except Exception:
+                config = {}
+        config['vpn_bypass'] = vpn_bypass
+        with open(CONFIG_FILE, 'w') as f:
+            json.dump(config, f)
+        return redirect('/advanced-settings')
+
+    vpn_bypass = app.config.get('VPN_BYPASS', False)
+    return render_template('advanced-settings.html', vpn_bypass=vpn_bypass)
 
 def open_file_or_folder(path):
     """
@@ -156,7 +177,24 @@ def set_download_dir():
     app.config['DOWNLOAD_DIR'] = path
     return redirect('/')
 
+def remote_empty_directories_in_download_dir(download_dir) -> None:
+    for root, dirs, files in os.walk(download_dir, topdown=False):
+        for d in dirs:
+            dir_path = os.path.join(root, d)
+            if not os.listdir(dir_path):
+                os.rmdir(dir_path)
+
+@app.route('/jellyfin', methods=['GET'])
+def fix_directory():
+    """
+    Hardcoded chown for my personal jellyfin media directory
+    :return: None
+    """
+    subprocess.run('chmod -R jellyfin:jellyfin /media')
+    return subprocess.run('ls -al /media').stdout.decode('utf-8') + '<br><a href="/">Go Back</a>'
+
 
 @app.before_request
 def remove_torrent():
     remove_completed_torrents()
+    remote_empty_directories_in_download_dir(app.config['DOWNLOAD_DIR'])
