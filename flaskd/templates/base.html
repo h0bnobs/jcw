@@ -20,7 +20,6 @@
         <a href="/" class="{{ 'active' if request.endpoint in ('home', 'search') }}">home</a>
         <a href="/active-downloads" class="{{ 'active' if request.endpoint == 'active_downloads' }}">downloads</a>
         <a href="/download-history" class="{{ 'active' if request.endpoint == 'download_history' }}">history</a>
-        <a href="/open-folder/{{ download_dir }}">open folder</a>
         <a href="/advanced-settings" class="{{ 'active' if request.endpoint == 'advanced_settings' }}">settings</a>
         <a href="/qbit">qBittorrent</a>
     </nav>

@@ -23,6 +23,20 @@
 </div>
 
 <div class="card">
+    <h3 class="card-title">network interface</h3>
+    <p class="page-subtitle" style="margin-bottom:12px">choose which interface / IP the server listens on. requires a restart to take effect.</p>
+    <form method="POST" action="/advanced-settings" id="nic-form">
+        <input type="hidden" name="vpn_bypass" value="{{ 'on' if vpn_bypass else '' }}">
+        <div class="inline-form">
+            <select name="bind_address" class="form-input" id="nic-select">
+                <option value="0.0.0.0" {{ 'selected' if bind_address == '0.0.0.0' }}>0.0.0.0 — all interfaces</option>
+            </select>
+            <button type="submit" class="btn btn-primary">save</button>
+        </div>
+    </form>
+</div>
+
+<div class="card">
     <h3 class="card-title">tools</h3>
     <div class="setting-row">
         <div class="setting-info">
@@ -32,4 +46,23 @@
         <a href="/jellyfin" class="btn btn-sm">run</a>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+fetch('/api/nics')
+    .then(function(r) { return r.json(); })
+    .then(function(nics) {
+        var sel = document.getElementById('nic-select');
+        var current = '{{ bind_address }}';
+        nics.forEach(function(nic) {
+            if (nic.address === '0.0.0.0') return;
+            var opt = document.createElement('option');
+            opt.value = nic.address;
+            opt.textContent = nic.address + ' \u2014 ' + nic.name;
+            if (nic.address === current) opt.selected = true;
+            sel.appendChild(opt);
+        });
+    });
+</script>
 {% endblock %}

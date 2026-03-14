@@ -22,7 +22,10 @@ CONFIG_FILE = 'config.json'
 
 @app.context_processor
 def inject_globals():
-    return {'download_dir': app.config.get('DOWNLOAD_DIR', '')}
+    return {
+        'download_dir': app.config.get('DOWNLOAD_DIR', ''),
+        'bind_address': app.config.get('BIND_ADDRESS', '0.0.0.0'),
+    }
 
 
 @app.route('/')
@@ -115,11 +118,24 @@ def active_downloads():
     ]
     return render_template('active-downloads.html', active_downloads=active)
 
+@app.route('/api/nics', methods=['GET'])
+def list_nics():
+    import psutil
+    nics = []
+    for name, addrs in psutil.net_if_addrs().items():
+        for addr in addrs:
+            if addr.family.name == 'AF_INET':  # IPv4 only
+                nics.append({'name': name, 'address': addr.address})
+    return json.dumps(nics), 200, {'Content-Type': 'application/json'}
+
+
 @app.route('/advanced-settings', methods=['GET', 'POST'])
 def advanced_settings():
     if request.method == 'POST':
         vpn_bypass = request.form.get('vpn_bypass') == 'on'
+        bind_address = request.form.get('bind_address', '0.0.0.0').strip()
         app.config['VPN_BYPASS'] = vpn_bypass
+        app.config['BIND_ADDRESS'] = bind_address
 
         # Read existing config
         config = {}
@@ -130,12 +146,14 @@ def advanced_settings():
             except Exception:
                 config = {}
         config['vpn_bypass'] = vpn_bypass
+        config['bind_address'] = bind_address
         with open(CONFIG_FILE, 'w') as f:
             json.dump(config, f)
         return redirect('/advanced-settings')
 
     vpn_bypass = app.config.get('VPN_BYPASS', False)
-    return render_template('advanced-settings.html', vpn_bypass=vpn_bypass)
+    bind_address = app.config.get('BIND_ADDRESS', '0.0.0.0')
+    return render_template('advanced-settings.html', vpn_bypass=vpn_bypass, bind_address=bind_address)
 
 def open_file_or_folder(path):
     """
@@ -235,7 +253,10 @@ def remote_empty_directories_in_download_dir(download_dir) -> None:
 
 @app.route('/qbit', methods=['GET'])
 def redirect_to_qbittorrent():
-    return redirect('http://localhost:9000')
+    host = app.config.get('BIND_ADDRESS', '0.0.0.0')
+    if host == '0.0.0.0':
+        host = request.host.split(':')[0]
+    return redirect(f'http://{host}:9000')
 
 @app.route('/jellyfin', methods=['GET'])
 def fix_directory():
