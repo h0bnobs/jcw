@@ -165,7 +165,7 @@ def open_folder(foldername):
 
 @app.route('/download-history', methods=['GET', 'POST'])
 def download_history():
-    return render_template('download-history.html',
+    return render_template('download-history.html', download_dir=app.config['DOWNLOAD_DIR'],
                            downloads=get_all_completed_downloads(app.config['DOWNLOAD_DIR']))
 
 

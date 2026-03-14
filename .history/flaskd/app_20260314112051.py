@@ -103,17 +103,15 @@ def remove_torrent_route():
 def active_downloads():
     active = [
         {
-            'hash': d['hash'],
-            'name': d.get('name', ''),
             'content_path': d['content_path'],
             'dlspeed': int(d['dlspeed']) / 1000000,
             'eta': int(d['eta']),
             'progress': round(float(d['progress']) * 100, 0),
-            'state': d.get('state', ''),
         }
         for d in get_active_downloads()
     ]
-    return render_template('active-downloads.html', active_downloads=active)
+    download_dir = app.config['DOWNLOAD_DIR']
+    return render_template('active-downloads.html', active_downloads=active, download_dir=download_dir)
 
 @app.route('/advanced-settings', methods=['GET', 'POST'])
 def advanced_settings():
@@ -165,7 +163,7 @@ def open_folder(foldername):
 
 @app.route('/download-history', methods=['GET', 'POST'])
 def download_history():
-    return render_template('download-history.html',
+    return render_template('download-history.html', download_dir=app.config['DOWNLOAD_DIR'],
                            downloads=get_all_completed_downloads(app.config['DOWNLOAD_DIR']))
 
 
@@ -186,13 +184,10 @@ def background_download_status():
     while not thread_stop_event.is_set():
         active_downloads = [
             {
-                'hash': d['hash'],
-                'name': d.get('name', ''),
                 'content_path': d['content_path'],
                 'dlspeed': int(d['dlspeed']) / 1000000,
                 'eta': int(d['eta']),
                 'progress': round(float(d['progress']) * 100, 0),
-                'state': d.get('state', ''),
             }
             for d in get_active_downloads()
         ]
