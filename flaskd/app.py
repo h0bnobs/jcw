@@ -256,7 +256,8 @@ def redirect_to_qbittorrent():
     host = app.config.get('BIND_ADDRESS', '0.0.0.0')
     if host == '0.0.0.0':
         host = request.host.split(':')[0]
-    return redirect(f'http://{host}:9000')
+    url = f'http://{host}:9000'
+    return f'<html><head><meta http-equiv="refresh" content="0;url={url}"></head><body></body></html>'
 
 @app.route('/jellyfin', methods=['GET'])
 def fix_directory():
