@@ -22,9 +22,13 @@ CONFIG_FILE = 'config.json'
 
 @app.context_processor
 def inject_globals():
+    host = app.config.get('BIND_ADDRESS', '0.0.0.0')
+    if host == '0.0.0.0':
+        host = request.host.split(':')[0]
     return {
         'download_dir': app.config.get('DOWNLOAD_DIR', ''),
         'bind_address': app.config.get('BIND_ADDRESS', '0.0.0.0'),
+        'qbit_host': host,
     }
 
 

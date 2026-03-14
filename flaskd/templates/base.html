@@ -21,7 +21,7 @@
         <a href="/active-downloads" class="{{ 'active' if request.endpoint == 'active_downloads' }}">downloads</a>
         <a href="/download-history" class="{{ 'active' if request.endpoint == 'download_history' }}">history</a>
         <a href="/advanced-settings" class="{{ 'active' if request.endpoint == 'advanced_settings' }}">settings</a>
-        <a href="/qbit">qBittorrent</a>
+        <a href="http://{{ qbit_host }}:9000" target="_blank" rel="noopener noreferrer">qBittorrent</a>
     </nav>
 </header>
 
