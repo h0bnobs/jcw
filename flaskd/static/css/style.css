@@ -119,6 +119,8 @@ a:hover { text-decoration: underline; }
 .btn-danger:hover { background: #fef2f2; }
 .btn-success { color: #16a34a; border-color: #bbf7d0; }
 .btn-success:hover { background: #f0fdf4; }
+.btn-warning { color: #b45309; border-color: #fde68a; background: #fffbeb; font-weight: 600; }
+.btn-warning:hover { background: #fef3c7; }
 .btn-sm { padding: 5px 10px; font-size: 12px; }
 
 /* ===== Forms ===== */
@@ -235,7 +237,42 @@ a:hover { text-decoration: underline; }
     border-radius: 4px;
     transition: width 0.5s ease;
 }
-.download-actions { display: flex; gap: 8px; }
+.download-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* State badge & hint shown on each download card */
+.state-badge {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    vertical-align: middle;
+    background: #f1f5f9;
+    color: #475569;
+}
+.state-badge.state-meta    { background: #fef3c7; color: #92400e; animation: pulse 2s ease-in-out infinite; }
+.state-badge.state-stalled { background: #fee2e2; color: #991b1b; }
+.state-badge.state-queued  { background: #e0e7ff; color: #3730a3; }
+.state-badge.state-dl      { background: #dcfce7; color: #166534; }
+.state-badge.state-check   { background: #e0f2fe; color: #075985; }
+.state-badge.state-paused  { background: #f1f5f9; color: #475569; }
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+}
+.dl-hint {
+    background: #fffbeb;
+    border-left: 3px solid #f59e0b;
+    color: #78350f;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    margin-bottom: 10px;
+    line-height: 1.45;
+}
 
 /* ===== History ===== */
 .history-item {

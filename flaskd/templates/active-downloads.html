@@ -33,31 +33,41 @@ function formatEta(seconds) {
     return seconds + 's';
 }
 
-function pauseTorrent(hash) {
-    fetch('/pause-torrent', {
+function post(url, hash) {
+    return fetch(url, {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         body: 'hash=' + encodeURIComponent(hash)
     });
 }
 
-function resumeTorrent(hash) {
-    fetch('/resume-torrent', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: 'hash=' + encodeURIComponent(hash)
+function pauseTorrent(hash)    { post('/pause-torrent', hash); }
+function resumeTorrent(hash)   { post('/resume-torrent', hash); }
+function reannounceTorrent(hash){ post('/reannounce-torrent', hash); }
+function boostTorrent(hash, btn) {
+    if (btn) { btn.disabled = true; btn.textContent = '⚡ boosting…'; }
+    post('/boost-torrent', hash).finally(function() {
+        if (btn) { setTimeout(function(){ btn.disabled = false; btn.textContent = '⚡ boost'; }, 2000); }
     });
 }
 
 function removeTorrent(hash) {
     if (confirm('Remove this download from qBittorrent?')) {
-        fetch('/remove-torrent', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: 'hash=' + encodeURIComponent(hash)
-        });
+        post('/remove-torrent', hash);
     }
 }
+
+// Map raw qBit state strings to a friendly label + a CSS-friendly tag.
+var STATE_LABELS = {
+    'metaDL':       {label: 'fetching metadata', tag: 'state-meta'},
+    'stalledDL':    {label: 'stalled — no peers', tag: 'state-stalled'},
+    'queuedDL':     {label: 'queued', tag: 'state-queued'},
+    'downloading':  {label: 'downloading', tag: 'state-dl'},
+    'forcedDL':     {label: 'force downloading', tag: 'state-dl'},
+    'checkingDL':   {label: 'checking', tag: 'state-check'},
+    'allocating':   {label: 'allocating', tag: 'state-check'},
+    'pausedDL':     {label: 'paused', tag: 'state-paused'}
+};
 
 socket.on('update_downloads', function(downloads) {
     var container = document.getElementById('downloads-container');
@@ -70,19 +80,46 @@ socket.on('update_downloads', function(downloads) {
         var card = document.createElement('div');
         card.className = 'download-card';
         var isPaused = d.state === 'pausedDL';
+        var stateInfo = STATE_LABELS[d.state] || {label: d.state, tag: ''};
+        var isStuck = (d.state === 'metaDL' || d.state === 'stalledDL');
+
         var toggleBtn = isPaused
             ? '<button class="btn btn-sm btn-success" onclick="resumeTorrent(\'' + d.hash + '\')">▶ resume</button>'
             : '<button class="btn btn-sm" onclick="pauseTorrent(\'' + d.hash + '\')">⏸ pause</button>';
+
+        // Boost is the headline action when a torrent is stuck. Otherwise still
+        // available but de-emphasised.
+        var boostBtn = '<button class="btn btn-sm ' + (isStuck ? 'btn-warning' : '') + '" '
+            + 'onclick="boostTorrent(\'' + d.hash + '\', this)" '
+            + 'title="Re-inject public trackers, force-start, then reannounce">⚡ boost</button>';
+        var reannBtn = '<button class="btn btn-sm" onclick="reannounceTorrent(\'' + d.hash + '\')" '
+            + 'title="Force a fresh tracker announce">↻ reannounce</button>';
+
+        var hint = '';
+        if (d.state === 'metaDL') {
+            hint = '<div class="dl-hint">⏳ qBittorrent is still discovering this torrent\'s metadata. '
+                 + 'If this takes more than a minute, click <b>boost</b> — we\'ll re-inject public trackers and force a reannounce.</div>';
+        } else if (d.state === 'stalledDL') {
+            hint = '<div class="dl-hint">⚠ no peers connected. Try <b>boost</b>, or pick a torrent with more seeders.</div>';
+        }
+
+        var peers = '<span title="seeds / leechers">👥 ' + (d.num_seeds || 0) + ' / ' + (d.num_leechs || 0) + '</span>';
+        var stateBadge = '<span class="state-badge ' + stateInfo.tag + '">' + esc(stateInfo.label) + '</span>';
+
         card.innerHTML =
-            '<div class="dl-name">' + esc(d.name || d.content_path) + '</div>' +
+            '<div class="dl-name">' + esc(d.name || d.content_path) + ' ' + stateBadge + '</div>' +
             '<div class="dl-stats">' +
                 '<span>⬇ ' + d.dlspeed.toFixed(2) + ' MB/s</span>' +
                 '<span>⏱ ' + formatEta(d.eta) + '</span>' +
+                peers +
                 '<span>' + d.progress + '%</span>' +
             '</div>' +
             '<div class="progress-bar"><div class="progress-fill" style="width:' + d.progress + '%"></div></div>' +
+            hint +
             '<div class="download-actions">' +
                 toggleBtn +
+                boostBtn +
+                reannBtn +
                 '<button class="btn btn-sm btn-danger" onclick="removeTorrent(\'' + d.hash + '\')">✕ remove</button>' +
             '</div>';
         container.appendChild(card);

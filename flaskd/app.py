@@ -3,6 +3,7 @@ import os
 import platform
 import re
 import subprocess
+import time
 from threading import Event
 
 from flask import Flask, render_template, request, redirect, session
@@ -12,7 +13,11 @@ from src.qbt.download_history import get_all_completed_downloads
 from src.qbt.download_torrent import download_torrent, is_vpn
 from src.qbt.find_torrents import get_torrents
 from src.qbt.remove_torrents import remove_completed_torrents
-from src.qbt.torrent_download_status import get_active_downloads, pause_download, resume_download, remove_download
+from src.qbt.torrent_download_status import (
+    get_active_downloads, pause_download, resume_download, remove_download,
+    force_reannounce, force_recheck, force_start_torrent, boost_torrent,
+)
+from src.qbt.client import is_available as qbit_available
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 app.secret_key = 'your_secret_key'
@@ -55,27 +60,38 @@ def search():
     return render_template('results.html', results=results, query=query, page=page)
 
 
+def _alert_back(msg: str) -> str:
+    """Show a JS alert with `msg` then send the user back. Keeps API surface tiny."""
+    safe = msg.replace("\\", "\\\\").replace("'", "\\'")
+    return f"<script>alert('{safe}'); window.history.back();</script>"
+
+
 @app.route('/download-torrent', methods=['GET'])
 def download():
     vpn_bypass = app.config.get("VPN_BYPASS", False)
     if not vpn_bypass and not is_vpn():
-        return "<script>alert('VPN is not active!'); window.history.back();</script>"
-    download_dir = app.config['DOWNLOAD_DIR']
-    download_torrent(request.args.get('magnet'), download_dir)
-    query = session.get('query', '')
-    return redirect(f'/search?query={query}')
+        return _alert_back('VPN is not active!')
+    if not qbit_available():
+        return _alert_back('qBittorrent is not running on port 9000.')
+    result = download_torrent(request.args.get('magnet'), app.config['DOWNLOAD_DIR'])
+    if not result.get('ok'):
+        return _alert_back(result.get('message', 'Failed to add torrent'))
+    return redirect('/active-downloads')
 
 
 @app.route('/download-magnet', methods=['POST'])
 def download_magnet():
     vpn_bypass = app.config.get("VPN_BYPASS", False)
     if not vpn_bypass and not is_vpn():
-        return "<script>alert('VPN is not active!'); window.history.back();</script>"
+        return _alert_back('VPN is not active!')
     magnet = request.form.get('magnet', '').strip()
     if not magnet.startswith('magnet:?'):
-        return redirect('/')
-    download_dir = app.config['DOWNLOAD_DIR']
-    download_torrent(magnet, download_dir)
+        return _alert_back("That doesn't look like a magnet link.")
+    if not qbit_available():
+        return _alert_back('qBittorrent is not running on port 9000.')
+    result = download_torrent(magnet, app.config['DOWNLOAD_DIR'])
+    if not result.get('ok'):
+        return _alert_back(result.get('message', 'Failed to add torrent'))
     return redirect('/active-downloads')
 
 
@@ -106,20 +122,57 @@ def remove_torrent_route():
     return '', 204
 
 
+@app.route('/boost-torrent', methods=['POST'])
+def boost_torrent_route():
+    """One-click rescue for a stuck torrent: re-inject trackers + force-start + reannounce."""
+    torrent_hash = request.form.get('hash', '')
+    if not re.match(r'^[a-fA-F0-9]{40}$', torrent_hash):
+        return 'Invalid hash', 400
+    boost_torrent(torrent_hash)
+    return '', 204
+
+
+@app.route('/reannounce-torrent', methods=['POST'])
+def reannounce_torrent_route():
+    torrent_hash = request.form.get('hash', '')
+    if not re.match(r'^[a-fA-F0-9]{40}$', torrent_hash):
+        return 'Invalid hash', 400
+    force_reannounce(torrent_hash)
+    return '', 204
+
+
+@app.route('/recheck-torrent', methods=['POST'])
+def recheck_torrent_route():
+    torrent_hash = request.form.get('hash', '')
+    if not re.match(r'^[a-fA-F0-9]{40}$', torrent_hash):
+        return 'Invalid hash', 400
+    force_recheck(torrent_hash)
+    return '', 204
+
+
+def _serialize_torrent(d: dict) -> dict:
+    """Turn a raw qBit torrent dict into the slim structure the UI expects.
+
+    Adds `num_seeds` / `num_leechs` so the UI can hint when a torrent is
+    starved for peers — the underlying cause of most metadata stalls.
+    """
+    return {
+        'hash': d['hash'],
+        'name': d.get('name', ''),
+        'content_path': d.get('content_path', ''),
+        'dlspeed': int(d.get('dlspeed', 0)) / 1000000,
+        'eta': int(d.get('eta', 0)),
+        'progress': round(float(d.get('progress', 0)) * 100, 0),
+        'state': d.get('state', ''),
+        'num_seeds': int(d.get('num_seeds', 0)),
+        'num_leechs': int(d.get('num_leechs', 0)),
+        'size': int(d.get('size', 0)),
+    }
+
+
 @app.route('/active-downloads', methods=['GET', 'POST'])
 def active_downloads():
-    active = [
-        {
-            'hash': d['hash'],
-            'name': d.get('name', ''),
-            'content_path': d['content_path'],
-            'dlspeed': int(d['dlspeed']) / 1000000,
-            'eta': int(d['eta']),
-            'progress': round(float(d['progress']) * 100, 0),
-            'state': d.get('state', ''),
-        }
-        for d in get_active_downloads()
-    ]
+    active = [_serialize_torrent(d) for d in get_active_downloads()]
     return render_template('active-downloads.html', active_downloads=active)
 
 @app.route('/api/nics', methods=['GET'])
@@ -205,21 +258,31 @@ thread_stop_event = Event()
 
 
 def background_download_status():
+    """Push the active-downloads list to all connected clients once per second.
+
+    Also auto-boosts any torrent that has been stuck in `metaDL` for more than
+    ~30 seconds. This is what cures the user's reported issue without them
+    having to click anything.
+    """
+    metadl_first_seen: dict[str, float] = {}
+    AUTO_BOOST_AFTER = 30  # seconds in metaDL before we re-inject trackers
     while not thread_stop_event.is_set():
-        active_downloads = [
-            {
-                'hash': d['hash'],
-                'name': d.get('name', ''),
-                'content_path': d['content_path'],
-                'dlspeed': int(d['dlspeed']) / 1000000,
-                'eta': int(d['eta']),
-                'progress': round(float(d['progress']) * 100, 0),
-                'state': d.get('state', ''),
-            }
-            for d in get_active_downloads()
-        ]
+        raw = get_active_downloads()
+        now = time.time()
+        for d in raw:
+            h = d.get('hash')
+            if d.get('state') == 'metaDL':
+                first = metadl_first_seen.setdefault(h, now)
+                if now - first > AUTO_BOOST_AFTER:
+                    print(f"[auto-boost] torrent {h[:8]}... stuck in metaDL — boosting")
+                    boost_torrent(h)
+                    # Re-arm so we don't spam: wait another full window.
+                    metadl_first_seen[h] = now
+            else:
+                metadl_first_seen.pop(h, None)
+        active_downloads = [_serialize_torrent(d) for d in raw]
         socketio.emit('update_downloads', active_downloads)
-        socketio.sleep(1)  # sleep 1s between updates
+        socketio.sleep(1)
 
 
 @socketio.on('connect')
@@ -273,7 +336,22 @@ def fix_directory():
     return subprocess.run(['ls', '-al', '/media'], capture_output=True, text=True).stdout.replace('\n', '<br>') + '<br><a href="/">Go Back</a>'
 
 
+# Periodic cleanup: previously this ran on EVERY HTTP request — meaning the
+# download dir was walked dozens of times per page load and qBit was hit
+# every time the favicon loaded. We now run it at most once per CLEANUP_INTERVAL.
+CLEANUP_INTERVAL = 30  # seconds
+_last_cleanup = 0.0
+
+
 @app.before_request
-def remove_torrent():
-    remove_completed_torrents()
-    remote_empty_directories_in_download_dir(app.config['DOWNLOAD_DIR'])
+def _maybe_cleanup():
+    global _last_cleanup
+    now = time.time()
+    if now - _last_cleanup < CLEANUP_INTERVAL:
+        return
+    _last_cleanup = now
+    try:
+        remove_completed_torrents()
+        remote_empty_directories_in_download_dir(app.config['DOWNLOAD_DIR'])
+    except Exception as e:
+        print(f"[cleanup] failed: {e}")
