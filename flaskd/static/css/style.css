@@ -259,6 +259,7 @@ a:hover { text-decoration: underline; }
 .state-badge.state-dl      { background: #dcfce7; color: #166534; }
 .state-badge.state-check   { background: #e0f2fe; color: #075985; }
 .state-badge.state-paused  { background: #f1f5f9; color: #475569; }
+.state-badge.state-error   { background: #fee2e2; color: #991b1b; }
 @keyframes pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.55; }

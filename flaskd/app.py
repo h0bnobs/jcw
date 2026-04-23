@@ -260,26 +260,32 @@ thread_stop_event = Event()
 def background_download_status():
     """Push the active-downloads list to all connected clients once per second.
 
-    Also auto-boosts any torrent that has been stuck in `metaDL` for more than
-    ~30 seconds. This is what cures the user's reported issue without them
-    having to click anything.
+    Auto-boosts any torrent stuck in `metaDL` for ~45s, but ONLY ONCE per
+    torrent. Repeatedly poking a half-resumed torrent was causing state
+    thrash (`metaDL` -> `checkingResumeData` -> `stoppedDL` -> ...) which
+    made downloads vanish from the UI.
     """
     metadl_first_seen: dict[str, float] = {}
-    AUTO_BOOST_AFTER = 30  # seconds in metaDL before we re-inject trackers
+    boosted: set[str] = set()
+    AUTO_BOOST_AFTER = 45  # seconds in metaDL before we re-inject trackers
     while not thread_stop_event.is_set():
         raw = get_active_downloads()
         now = time.time()
+        live_hashes = {d.get('hash') for d in raw}
+        # Forget torrents that are no longer present (so a re-add can be
+        # boosted again next time).
+        for h in list(metadl_first_seen):
+            if h not in live_hashes:
+                metadl_first_seen.pop(h, None)
+                boosted.discard(h)
         for d in raw:
             h = d.get('hash')
-            if d.get('state') == 'metaDL':
+            if d.get('state') == 'metaDL' and h not in boosted:
                 first = metadl_first_seen.setdefault(h, now)
                 if now - first > AUTO_BOOST_AFTER:
-                    print(f"[auto-boost] torrent {h[:8]}... stuck in metaDL — boosting")
+                    print(f"[auto-boost] torrent {h[:8]}... stuck in metaDL — boosting (one-shot)")
                     boost_torrent(h)
-                    # Re-arm so we don't spam: wait another full window.
-                    metadl_first_seen[h] = now
-            else:
-                metadl_first_seen.pop(h, None)
+                    boosted.add(h)
         active_downloads = [_serialize_torrent(d) for d in raw]
         socketio.emit('update_downloads', active_downloads)
         socketio.sleep(1)

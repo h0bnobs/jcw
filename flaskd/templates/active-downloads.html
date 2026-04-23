@@ -58,15 +58,24 @@ function removeTorrent(hash) {
 }
 
 // Map raw qBit state strings to a friendly label + a CSS-friendly tag.
+// Keep this list permissive — anything not matched falls through to a
+// generic "unknown state" badge, which is still better than the torrent
+// silently disappearing from the page.
 var STATE_LABELS = {
-    'metaDL':       {label: 'fetching metadata', tag: 'state-meta'},
-    'stalledDL':    {label: 'stalled — no peers', tag: 'state-stalled'},
-    'queuedDL':     {label: 'queued', tag: 'state-queued'},
-    'downloading':  {label: 'downloading', tag: 'state-dl'},
-    'forcedDL':     {label: 'force downloading', tag: 'state-dl'},
-    'checkingDL':   {label: 'checking', tag: 'state-check'},
-    'allocating':   {label: 'allocating', tag: 'state-check'},
-    'pausedDL':     {label: 'paused', tag: 'state-paused'}
+    'metaDL':             {label: 'fetching metadata', tag: 'state-meta'},
+    'stalledDL':          {label: 'stalled — no peers', tag: 'state-stalled'},
+    'queuedDL':           {label: 'queued', tag: 'state-queued'},
+    'downloading':        {label: 'downloading', tag: 'state-dl'},
+    'forcedDL':           {label: 'force downloading', tag: 'state-dl'},
+    'checkingDL':         {label: 'checking', tag: 'state-check'},
+    'checkingResumeData': {label: 'resuming', tag: 'state-check'},
+    'allocating':         {label: 'allocating', tag: 'state-check'},
+    'moving':             {label: 'moving files', tag: 'state-check'},
+    'pausedDL':           {label: 'paused', tag: 'state-paused'},
+    'stoppedDL':          {label: 'stopped', tag: 'state-paused'},
+    'error':              {label: 'error', tag: 'state-error'},
+    'missingFiles':       {label: 'missing files', tag: 'state-error'},
+    'unknown':            {label: 'unknown', tag: 'state-error'}
 };
 
 socket.on('update_downloads', function(downloads) {
@@ -80,8 +89,8 @@ socket.on('update_downloads', function(downloads) {
         var card = document.createElement('div');
         card.className = 'download-card';
         var isPaused = d.state === 'pausedDL';
-        var stateInfo = STATE_LABELS[d.state] || {label: d.state, tag: ''};
-        var isStuck = (d.state === 'metaDL' || d.state === 'stalledDL');
+        var stateInfo = STATE_LABELS[d.state] || {label: d.state || 'unknown', tag: 'state-error'};
+        var isStuck = (d.state === 'metaDL' || d.state === 'stalledDL' || d.state === 'error' || d.state === 'missingFiles');
 
         var toggleBtn = isPaused
             ? '<button class="btn btn-sm btn-success" onclick="resumeTorrent(\'' + d.hash + '\')">▶ resume</button>'
@@ -101,6 +110,10 @@ socket.on('update_downloads', function(downloads) {
                  + 'If this takes more than a minute, click <b>boost</b> — we\'ll re-inject public trackers and force a reannounce.</div>';
         } else if (d.state === 'stalledDL') {
             hint = '<div class="dl-hint">⚠ no peers connected. Try <b>boost</b>, or pick a torrent with more seeders.</div>';
+        } else if (d.state === 'error' || d.state === 'missingFiles') {
+            hint = '<div class="dl-hint">✕ qBittorrent reported an error for this torrent. Check the qBit WebUI for details, or try <b>boost</b> + <b>recheck</b>.</div>';
+        } else if (d.state === 'stoppedDL' || d.state === 'pausedDL') {
+            hint = '<div class="dl-hint">⏸ this download is stopped. Click <b>resume</b> to continue.</div>';
         }
 
         var peers = '<span title="seeds / leechers">👥 ' + (d.num_seeds || 0) + ' / ' + (d.num_leechs || 0) + '</span>';
