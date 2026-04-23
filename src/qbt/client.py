@@ -28,9 +28,16 @@ QBIT_URL = "http://localhost:9000/"
 # set max_ratio — leaving DHT/PeX/LSD at qBit's defaults, which on some
 # installs are *off*, producing the dreaded "downloading metadata" forever.
 RECOMMENDED_PREFS = {
-    # Stop seeding once ratio hits 0 (i.e. immediately on completion).
+    # Stop seeding once ratio hits a tiny value (effectively immediately on
+    # completion) — but NOT exactly 0, because some qBit builds evaluate
+    # `ratio >= max_ratio` against the initial ratio of 0/0 and pause/remove
+    # the torrent the moment it's added. 0.001 is a safe non-zero floor.
     "max_ratio_enabled": True,
-    "max_ratio": 0,
+    "max_ratio": 0.001,
+    # Also disable the seeding-time limit explicitly so it can't kick in.
+    "max_seeding_time_enabled": False,
+    # When max ratio is reached, PAUSE (don't remove). Value 0 = pause torrent.
+    "max_ratio_act": 0,
     # Peer discovery — critical for magnets without trackers.
     "dht": True,
     "pex": True,
@@ -46,6 +53,8 @@ RECOMMENDED_PREFS = {
     "max_uploads_per_torrent": 4,
     # Anonymous mode off — it disables DHT/PeX/LSD which is what we need.
     "anonymous_mode": False,
+    # Auto-management off so qBit doesn't move the torrent unexpectedly.
+    "auto_tmm_enabled": False,
 }
 
 _lock = threading.Lock()

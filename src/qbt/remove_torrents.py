@@ -30,6 +30,7 @@ def remove_completed_torrents() -> None:
         progress = float(t.get("progress", 0))
         if state in _COMPLETED_STATES and progress >= 1.0:
             try:
+                print(f"[cleanup] deleting completed torrent {t.get('hash', '?')[:8]}... (state={state}, progress={progress})")
                 client.delete(t["hash"])
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"[cleanup] delete failed: {e}")

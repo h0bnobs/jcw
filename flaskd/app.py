@@ -264,16 +264,51 @@ def background_download_status():
     torrent. Repeatedly poking a half-resumed torrent was causing state
     thrash (`metaDL` -> `checkingResumeData` -> `stoppedDL` -> ...) which
     made downloads vanish from the UI.
+
+    Includes verbose diagnostic logging of state transitions so we can
+    actually SEE which actor is removing a torrent (qBit auto-rule vs.
+    our cleanup vs. UI filter).
     """
+    from src.qbt.client import qb as _qb_client, QbitUnavailable as _QU
+
     metadl_first_seen: dict[str, float] = {}
     boosted: set[str] = set()
-    AUTO_BOOST_AFTER = 45  # seconds in metaDL before we re-inject trackers
+    last_states: dict[str, str] = {}
+    AUTO_BOOST_AFTER = 45
     while not thread_stop_event.is_set():
-        raw = get_active_downloads()
+        # Inspect ALL torrents (not just active) so we can log state changes
+        # even when something gets booted out of the active set.
+        try:
+            all_t = _qb_client().torrents()
+        except _QU:
+            all_t = []
+        except Exception as e:
+            print(f"[bg-status] qb.torrents() failed: {e}")
+            all_t = []
+
+        present_now = {t.get('hash'): t for t in all_t}
+
+        # Log state changes + disappearances.
+        for h, prev in list(last_states.items()):
+            if h not in present_now:
+                print(f"[diag] torrent {h[:8]}... DISAPPEARED from qBit entirely (was state={prev}) — something deleted it")
+                last_states.pop(h, None)
+                metadl_first_seen.pop(h, None)
+                boosted.discard(h)
+        for h, t in present_now.items():
+            cur = t.get('state', '?')
+            if last_states.get(h) != cur:
+                if h in last_states:
+                    print(f"[diag] torrent {h[:8]}... state {last_states[h]} -> {cur} (progress={t.get('progress', 0):.3f}, peers={t.get('num_seeds', 0)}/{t.get('num_leechs', 0)})")
+                else:
+                    print(f"[diag] torrent {h[:8]}... NEW state={cur} name={t.get('name', '?')[:60]}")
+                last_states[h] = cur
+
+        # Filter to active for the UI.
+        from src.qbt.torrent_download_status import COMPLETED_STATES as _COMPLETED
+        raw = [t for t in all_t if t.get('state') not in _COMPLETED]
         now = time.time()
         live_hashes = {d.get('hash') for d in raw}
-        # Forget torrents that are no longer present (so a re-add can be
-        # boosted again next time).
         for h in list(metadl_first_seen):
             if h not in live_hashes:
                 metadl_first_seen.pop(h, None)
