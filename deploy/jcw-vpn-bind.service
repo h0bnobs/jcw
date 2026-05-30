@@ -1,0 +1,20 @@
+[Unit]
+Description=JCW VPN-bind monitor (keeps qBittorrent pinned to the current Mullvad tunnel IP)
+# Mullvad hands out a new tunnel IP on reconnect / key rotation; this keeps
+# qBittorrent's interface bind in step so downloads do not silently stall.
+After=network-online.target qbittorrent.service mullvad-daemon.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/jcw
+# Run the monitor as a module so its `from . import client` relative import
+# resolves against the src.qbt package.
+ExecStart=/root/jcw/venv/bin/python -m src.qbt.vpn_bind_monitor
+Restart=always
+RestartSec=5
+# Unbuffered so logs land in the journal promptly.
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

@@ -16,7 +16,7 @@ from __future__ import annotations
 import os
 import time
 from typing import List
-from urllib.parse import urlparse, parse_qsl, urlencode, urlunparse
+from urllib.parse import quote, unquote
 
 import requests
 
@@ -80,17 +80,25 @@ def get_trackers() -> List[str]:
 
 
 def enrich_magnet(magnet: str) -> str:
-    """Append public trackers to a magnet link, preserving any existing ones."""
+    """Append public trackers to a magnet link, preserving any existing ones.
+
+    The original magnet string is left byte-for-byte intact and new `tr=`
+    entries are simply appended. We deliberately do NOT round-trip the URI
+    through urlparse/urlencode: that re-encodes the info-hash from
+    `xt=urn:btih:HASH` to `xt=urn%3Abtih%3AHASH`, which some libtorrent
+    builds fail to recognise — leaving the torrent stuck on "downloading
+    metadata" forever.
+    """
     if not magnet or not magnet.startswith("magnet:?"):
         return magnet
-    parsed = urlparse(magnet)
-    # parse_qsl preserves duplicates of the same key, which is exactly what
-    # magnet links use (multiple `tr=` entries).
-    pairs = parse_qsl(parsed.query, keep_blank_values=False)
-    existing = {v for k, v in pairs if k == "tr"}
-    for tr in get_trackers():
-        if tr not in existing:
-            pairs.append(("tr", tr))
-            existing.add(tr)
-    new_query = urlencode(pairs)
-    return urlunparse(parsed._replace(query=new_query))
+    # Collect trackers already present (decoded) so we don't add duplicates.
+    existing = set()
+    for part in magnet.split("&"):
+        if part.startswith("tr="):
+            existing.add(unquote(part[3:]))
+    extra = "".join(
+        f"&tr={quote(tr, safe='')}"
+        for tr in get_trackers()
+        if tr not in existing
+    )
+    return magnet + extra
