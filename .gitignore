@@ -6,3 +6,4 @@ src/db/torrents.db
 tempdownloads
 tempdownloads2
 config.json
+.history

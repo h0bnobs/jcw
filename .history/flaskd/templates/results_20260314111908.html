@@ -5,10 +5,6 @@
 <h1 class="page-title">results for "{{ query }}"</h1>
 <p class="page-subtitle">page {{ page }} · {{ results|length }} results from multiple sources</p>
 
-<div class="card" style="margin-bottom:16px; padding:12px 16px;">
-    <input class="form-input" type="text" id="filter-input" placeholder="filter results, e.g. S02E01…" autofocus>
-</div>
-
 <div class="table-wrap">
     <table class="results-table">
         <thead>
@@ -120,15 +116,6 @@
 
 {% block scripts %}
 <script>
-document.getElementById('filter-input').addEventListener('input', function() {
-    var term = this.value.toLowerCase();
-    var rows = document.querySelectorAll('.results-table tbody tr');
-    rows.forEach(function(row) {
-        var name = (row.dataset.name || '').toLowerCase();
-        row.style.display = name.indexOf(term) !== -1 ? '' : 'none';
-    });
-});
-
 function showDetail(row) {
     document.getElementById('modal-name').textContent = row.dataset.name;
     document.getElementById('modal-size').textContent = row.dataset.size;

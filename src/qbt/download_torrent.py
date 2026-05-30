@@ -1,43 +1,46 @@
+"""Magnet download + VPN helpers."""
+from __future__ import annotations
+
 import psutil
 import requests
-from qbittorrent import Client
 
-qb = Client('http://localhost:9000/')
-qb.login()
-prefs = {
-    "max_ratio_enabled": True,
-    "max_ratio": 0
-}
-qb.set_preferences(**prefs)
+from .client import qb, QbitUnavailable
+from .trackers import enrich_magnet
 
 
 def get_ip_address() -> str:
-    """
-    Get the current public IP address of the machine.
-    :return: Public IP address as a string.
-    """
-    ip = requests.get('https://api.ipify.org').content.decode('utf8')
-    print(ip)
-    print(format(ip))
-    return format(ip)
+    """Return the current public IP (best-effort)."""
+    try:
+        return requests.get("https://api.ipify.org", timeout=5).text.strip()
+    except Exception:
+        return ""
 
 
 def is_vpn() -> bool:
-    """
-    Check if the current IP address is associated with a VPN service.
-    :return: True if the IP is a VPN, False otherwise.
-    """
-    # api_key = "2c1294b9924b42fe9eba83fcf032374d"  # sigma
-    # response = requests.get(f"https://vpnapi.io/api/{get_ip_address()}?key={api_key}")
-    # data = json.loads(response.text)
-    # return data["security"]["vpn"]
-    nics = psutil.net_if_addrs()
-    for nic in nics.items():
-        if "tun" in nic[0] or "tap" in nic[0] or "vpn" in nic[0] or "wg" in nic[0] or "ovpn" in nic[0]:
+    """Detect a VPN by looking for tun/tap/wg-style network interfaces."""
+    for name in psutil.net_if_addrs().keys():
+        n = name.lower()
+        if any(tag in n for tag in ("tun", "tap", "vpn", "wg", "ovpn", "mullvad", "proton")):
             return True
     return False
 
 
-def download_torrent(magnet_link: str, download_path: str):
-    qb.download_from_link(magnet_link, savepath=download_path)
-    return download_path
+def download_torrent(magnet_link: str, download_path: str) -> dict:
+    """Add a magnet to qBittorrent.
+
+    Returns {ok, message} so the Flask layer can show a sensible response
+    instead of silently swallowing errors (which made "downloading metadata"
+    look like the only failure mode).
+    """
+    if not magnet_link or not magnet_link.startswith("magnet:?"):
+        return {"ok": False, "message": "Invalid magnet link"}
+    enriched = enrich_magnet(magnet_link)
+    try:
+        client = qb()
+    except QbitUnavailable as e:
+        return {"ok": False, "message": str(e)}
+    try:
+        client.download_from_link(enriched, savepath=download_path)
+    except Exception as e:
+        return {"ok": False, "message": f"qBittorrent rejected the magnet: {e}"}
+    return {"ok": True, "message": "Added to qBittorrent", "savepath": download_path}

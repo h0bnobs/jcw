@@ -1,38 +1,142 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Active Downloads</title>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-</head>
-<body>
-<img src="../static/img/ripley.png" alt="Logo" style="width:150px; height: 150px; position:absolute; top:0; right:0;">
-<button onclick="location.href='/'">Home</button>
-<button onclick="location.href='/download-history'">See Download History</button>
-<button onclick="location.href='/open-folder/{{ download_dir }}'">Open Downloads Folder</button>
-<button onclick="location.href='/qbit'">qBittorrent</button>
-<h2>Active Downloads</h2>
-<ul id="downloads-list"></ul>
+{% extends "base.html" %}
+{% block title %}Active Downloads{% endblock %}
+{% block head %}
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+{% endblock %}
 
+{% block content %}
+<h1 class="page-title">active downloads</h1>
+<p class="page-subtitle">real-time download progress</p>
+
+<div id="downloads-container">
+    <div class="empty-state">
+        <div class="empty-icon">📭</div>
+        <p>no active downloads</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
 <script>
-    const socket = io();
+var socket = io();
 
-    // When the server sends download updates
-    socket.on('update_downloads', function (active_downloads) {
-        const list = document.getElementById('downloads-list');
-        list.innerHTML = ''; // Clear old items
+function esc(str) {
+    var d = document.createElement('div');
+    d.textContent = str || '';
+    return d.innerHTML;
+}
 
-        active_downloads.forEach(d => {
-            const li = document.createElement('li');
-            li.innerHTML = `
-                    <strong>location:</strong> ${d.content_path}<br>
-                    <strong>speed:</strong> ${d.dlspeed.toFixed(2)} MB/s<br>
-                    <strong>progress:</strong> ${d.progress}%<br>
-                    <strong>eta:</strong> ${d.eta > 60 ? `${Math.floor(d.eta / 60)}:${(d.eta % 60).toString().padStart(2, '0')}` + "m" : `${d.eta}s`}
-                `;
-            list.appendChild(li);
-        });
+function formatEta(seconds) {
+    if (seconds <= 0 || seconds >= 8640000) return '∞';
+    if (seconds > 3600) return Math.floor(seconds / 3600) + 'h ' + Math.floor((seconds % 3600) / 60) + 'm';
+    if (seconds > 60) return Math.floor(seconds / 60) + 'm ' + (seconds % 60) + 's';
+    return seconds + 's';
+}
+
+function post(url, hash) {
+    return fetch(url, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'hash=' + encodeURIComponent(hash)
     });
+}
+
+function pauseTorrent(hash)    { post('/pause-torrent', hash); }
+function resumeTorrent(hash)   { post('/resume-torrent', hash); }
+function reannounceTorrent(hash){ post('/reannounce-torrent', hash); }
+function boostTorrent(hash, btn) {
+    if (btn) { btn.disabled = true; btn.textContent = '⚡ boosting…'; }
+    post('/boost-torrent', hash).finally(function() {
+        if (btn) { setTimeout(function(){ btn.disabled = false; btn.textContent = '⚡ boost'; }, 2000); }
+    });
+}
+
+function removeTorrent(hash) {
+    if (confirm('Remove this download from qBittorrent?')) {
+        post('/remove-torrent', hash);
+    }
+}
+
+// Map raw qBit state strings to a friendly label + a CSS-friendly tag.
+// Keep this list permissive — anything not matched falls through to a
+// generic "unknown state" badge, which is still better than the torrent
+// silently disappearing from the page.
+var STATE_LABELS = {
+    'metaDL':             {label: 'fetching metadata', tag: 'state-meta'},
+    'stalledDL':          {label: 'stalled — no peers', tag: 'state-stalled'},
+    'queuedDL':           {label: 'queued', tag: 'state-queued'},
+    'downloading':        {label: 'downloading', tag: 'state-dl'},
+    'forcedDL':           {label: 'force downloading', tag: 'state-dl'},
+    'checkingDL':         {label: 'checking', tag: 'state-check'},
+    'checkingResumeData': {label: 'resuming', tag: 'state-check'},
+    'allocating':         {label: 'allocating', tag: 'state-check'},
+    'moving':             {label: 'moving files', tag: 'state-check'},
+    'pausedDL':           {label: 'paused', tag: 'state-paused'},
+    'stoppedDL':          {label: 'stopped', tag: 'state-paused'},
+    'error':              {label: 'error', tag: 'state-error'},
+    'missingFiles':       {label: 'missing files', tag: 'state-error'},
+    'unknown':            {label: 'unknown', tag: 'state-error'}
+};
+
+socket.on('update_downloads', function(downloads) {
+    var container = document.getElementById('downloads-container');
+    if (!downloads || downloads.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>no active downloads</p></div>';
+        return;
+    }
+    container.innerHTML = '';
+    downloads.forEach(function(d) {
+        var card = document.createElement('div');
+        card.className = 'download-card';
+        var isPaused = d.state === 'pausedDL';
+        var stateInfo = STATE_LABELS[d.state] || {label: d.state || 'unknown', tag: 'state-error'};
+        var isStuck = (d.state === 'metaDL' || d.state === 'stalledDL' || d.state === 'error' || d.state === 'missingFiles');
+
+        var toggleBtn = isPaused
+            ? '<button class="btn btn-sm btn-success" onclick="resumeTorrent(\'' + d.hash + '\')">▶ resume</button>'
+            : '<button class="btn btn-sm" onclick="pauseTorrent(\'' + d.hash + '\')">⏸ pause</button>';
+
+        // Boost is the headline action when a torrent is stuck. Otherwise still
+        // available but de-emphasised.
+        var boostBtn = '<button class="btn btn-sm ' + (isStuck ? 'btn-warning' : '') + '" '
+            + 'onclick="boostTorrent(\'' + d.hash + '\', this)" '
+            + 'title="Re-inject public trackers, force-start, then reannounce">⚡ boost</button>';
+        var reannBtn = '<button class="btn btn-sm" onclick="reannounceTorrent(\'' + d.hash + '\')" '
+            + 'title="Force a fresh tracker announce">↻ reannounce</button>';
+
+        var hint = '';
+        if (d.state === 'metaDL') {
+            hint = '<div class="dl-hint">⏳ qBittorrent is still discovering this torrent\'s metadata. '
+                 + 'If this takes more than a minute, click <b>boost</b> — we\'ll re-inject public trackers and force a reannounce.</div>';
+        } else if (d.state === 'stalledDL') {
+            hint = '<div class="dl-hint">⚠ no peers connected. Try <b>boost</b>, or pick a torrent with more seeders.</div>';
+        } else if (d.state === 'error' || d.state === 'missingFiles') {
+            hint = '<div class="dl-hint">✕ qBittorrent reported an error for this torrent. Check the qBit WebUI for details, or try <b>boost</b> + <b>recheck</b>.</div>';
+        } else if (d.state === 'stoppedDL' || d.state === 'pausedDL') {
+            hint = '<div class="dl-hint">⏸ this download is stopped. Click <b>resume</b> to continue.</div>';
+        }
+
+        var peers = '<span title="seeds / leechers">👥 ' + (d.num_seeds || 0) + ' / ' + (d.num_leechs || 0) + '</span>';
+        var stateBadge = '<span class="state-badge ' + stateInfo.tag + '">' + esc(stateInfo.label) + '</span>';
+
+        card.innerHTML =
+            '<div class="dl-name">' + esc(d.name || d.content_path) + ' ' + stateBadge + '</div>' +
+            '<div class="dl-stats">' +
+                '<span>⬇ ' + d.dlspeed.toFixed(2) + ' MB/s</span>' +
+                '<span>⏱ ' + formatEta(d.eta) + '</span>' +
+                peers +
+                '<span>' + d.progress + '%</span>' +
+            '</div>' +
+            '<div class="progress-bar"><div class="progress-fill" style="width:' + d.progress + '%"></div></div>' +
+            hint +
+            '<div class="download-actions">' +
+                toggleBtn +
+                boostBtn +
+                reannBtn +
+                '<button class="btn btn-sm btn-danger" onclick="removeTorrent(\'' + d.hash + '\')">✕ remove</button>' +
+            '</div>';
+        container.appendChild(card);
+    });
+});
 </script>
-</body>
-</html>
+{% endblock %}
