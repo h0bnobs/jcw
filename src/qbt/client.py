@@ -29,8 +29,8 @@ QBIT_URL = "http://localhost:9000/"
 _VPN_IFACE_TAGS = ("tun", "tap", "vpn", "wg", "ovpn", "mullvad", "proton")
 
 
-def vpn_bind_address() -> Optional[str]:
-    """Return the current IPv4 of the active VPN tunnel interface, if any.
+def vpn_interface() -> Optional[tuple[str, str]]:
+    """Return (interface_name, IPv4) of the active VPN tunnel, or None.
 
     qBittorrent should be pinned to the VPN so peer traffic never leaks onto
     the physical NIC. The crucial detail is HOW we pin it: binding to the
@@ -39,16 +39,27 @@ def vpn_bind_address() -> Optional[str]:
     reports 0 nodes and every UDP tracker fails with "No such device", so
     magnets hang forever on "downloading metadata" while only HTTP/S trackers
     work. Binding to the interface's IP instead keeps the leak protection
-    without killing UDP. We re-resolve the IP on every connect because VPNs
-    such as Mullvad hand out a fresh address on each reconnect.
+    without killing UDP.
+
+    We return the name too because libtorrent scopes its listen socket to the
+    interface *index* behind the IP. Mullvad reuses the same tunnel IP across
+    reconnects but the kernel assigns a fresh interface index each time, which
+    leaves the socket scoped to a now-dead index — the same ENODEV failure.
+    The bind monitor uses the name to detect index changes and re-pin.
     """
     for name, addrs in psutil.net_if_addrs().items():
         if not any(tag in name.lower() for tag in _VPN_IFACE_TAGS):
             continue
         for a in addrs:
             if a.family == socket.AF_INET and a.address:
-                return a.address
+                return name, a.address
     return None
+
+
+def vpn_bind_address() -> Optional[str]:
+    """Return the current IPv4 of the active VPN tunnel interface, if any."""
+    iface = vpn_interface()
+    return iface[1] if iface else None
 
 # Settings tuned to maximise peer discovery for magnet links coming from
 # public trackers (which is the common case here). The previous code only
