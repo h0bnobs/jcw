@@ -1,0 +1,16 @@
+[Unit]
+Description=JCW Python Service
+Wants=network-online.target
+After=network-online.target qbittorrent.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/jcw
+ExecStart=/bin/bash -c "/root/jcw/venv/bin/python /root/jcw/jcw.py"
+Restart=on-failure
+RestartSec=5
+Environment="PATH=/root/jcw/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+[Install]
+WantedBy=multi-user.target

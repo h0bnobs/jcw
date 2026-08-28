@@ -1,5 +1,26 @@
 # Deploy notes
 
+## jcw.service — the web portal itself
+
+Runs `jcw.py` (the Flask app on port 80). The `require-mount.conf` drop-in
+holds it back until `/media/jellyfin` — the download disk, mounted via
+`/etc/fstab` by UUID — is actually mounted, so it never starts writing to an
+empty mountpoint after a reboot before the disk is ready.
+
+### Install (on the host, as root)
+
+```sh
+cp /root/jcw/deploy/jcw.service /etc/systemd/system/
+mkdir -p /etc/systemd/system/jcw.service.d
+cp /root/jcw/deploy/jcw.service.d/require-mount.conf /etc/systemd/system/jcw.service.d/
+systemctl daemon-reload
+systemctl enable --now jcw.service
+```
+
+Needs `/media/jellyfin` (or wherever `config.json`'s `download_dir` points)
+mounted and a `media-jellyfin.mount` unit for that path — see the host's
+`/etc/fstab` and the `mele-host-infra` repo for the disk-mount notes.
+
 ## qbittorrent.service — the torrent client itself
 
 Runs `qbittorrent-nox` headless as root, WebUI on port 9000 (see the main
