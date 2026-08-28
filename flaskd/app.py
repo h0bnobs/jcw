@@ -10,7 +10,7 @@ from flask import Flask, render_template, request, redirect, session
 from flask_socketio import SocketIO
 
 from src.qbt.download_history import get_all_completed_downloads
-from src.qbt.download_torrent import download_torrent, is_vpn
+from src.qbt.download_torrent import download_torrent, is_vpn, tunnel_is_stale, reconnect_tunnel
 from src.qbt.find_torrents import get_torrents
 from src.qbt.remove_torrents import remove_completed_torrents
 from src.qbt.torrent_download_status import (
@@ -47,6 +47,13 @@ def search():
     vpn_bypass = app.config.get("VPN_BYPASS", False)
     if not vpn_bypass and not is_vpn():
         return "<script>alert('VPN is not active!'); window.history.back();</script>"
+    if not vpn_bypass and tunnel_is_stale():
+        # Interface is up but the WireGuard session has gone silently dead -
+        # every search request would otherwise hang for ~30s (each site's
+        # connect timing out in turn) and come back empty. One reconnect
+        # attempt here beats surfacing that as "no results".
+        print("[search] tunnel looks stale, reconnecting before searching")
+        reconnect_tunnel()
     query = request.args.get('query')
     page = int(request.args.get('page', 1))
 

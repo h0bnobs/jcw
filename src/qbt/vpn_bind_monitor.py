@@ -46,6 +46,7 @@ import time
 
 from . import client
 from .client import QbitUnavailable, vpn_interface
+from .download_torrent import tunnel_is_stale, reconnect_tunnel
 
 # How often to check the tunnel IP. Cheap (a psutil call plus one API read),
 # and an IP change only needs to be caught within a few seconds.
@@ -53,6 +54,12 @@ POLL_INTERVAL = 10.0
 # After a failed API call, wait a bit before retrying so a down/restarting
 # qBittorrent is not hammered.
 ERROR_BACKOFF = 15.0
+# How often to actively probe that the tunnel is passing traffic, not just
+# that the interface exists. Costs one TCP connect, so this is much coarser
+# than POLL_INTERVAL - this catches a stale WireGuard session (interface up,
+# byte counters frozen, "mullvad status" still says Connected) which is a
+# slow-moving failure that doesn't need sub-minute detection.
+STALE_CHECK_INTERVAL = 60.0
 
 
 def _current_bind(c) -> str:
@@ -107,6 +114,20 @@ def check_once(last_logged_state: dict) -> None:
     if last_logged_state.get("vpn_up") is not True:
         print(f"[vpn-bind] VPN tunnel up, IP {vpn_ip} on {vpn_name} (if{ifindex})")
         last_logged_state["vpn_up"] = True
+
+    now = time.time()
+    if now - last_logged_state.get("last_stale_check", 0) >= STALE_CHECK_INTERVAL:
+        last_logged_state["last_stale_check"] = now
+        if tunnel_is_stale():
+            print("[vpn-bind] tunnel interface up but not passing traffic - reconnecting")
+            if reconnect_tunnel():
+                print("[vpn-bind] reconnect cleared the stale tunnel")
+            else:
+                print("[vpn-bind] reconnect did not clear the stale tunnel, will retry next check")
+            # A reconnect can hand out a new IP/ifindex; let the next normal
+            # poll re-read the interface and re-pin qBittorrent against it
+            # rather than acting on the now-stale `iface` read from above.
+            return
 
     try:
         c = client.qb()

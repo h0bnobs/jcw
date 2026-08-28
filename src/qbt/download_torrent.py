@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 import os
+import socket
+import subprocess
+import time
 from urllib.parse import parse_qs, unquote_plus, urlsplit
 
 import psutil
@@ -26,6 +29,52 @@ def is_vpn() -> bool:
         if any(tag in n for tag in ("tun", "tap", "vpn", "wg", "ovpn", "mullvad", "proton")):
             return True
     return False
+
+
+def tunnel_is_stale(timeout: float = 3.0) -> bool:
+    """Best-effort check that the tunnel is actually passing traffic.
+
+    `is_vpn()` only checks that a wg/tun-style interface exists — it stays
+    true even when Mullvad's WireGuard session has gone silently dead (daemon
+    still reports "Connected", but the interface's RX/TX counters are frozen
+    and nothing new can get out). Seen live: torrent search hung for ~30s and
+    came back empty because every outbound HTTPS connect through the tunnel
+    just timed out. A quick TCP connect to a fixed IP (no DNS, so this can't
+    be confused with a DNS problem) proves packets are actually flowing.
+
+    Returns False (not stale) if no VPN interface is up at all — that's
+    `is_vpn()`'s job to catch, not this one's.
+    """
+    if not is_vpn():
+        return False
+    try:
+        with socket.create_connection(("1.1.1.1", 443), timeout=timeout):
+            return False
+    except OSError:
+        return True
+
+
+def reconnect_tunnel(wait: float = 5.0) -> bool:
+    """Force a fresh WireGuard handshake and confirm it actually came up.
+
+    Called when `tunnel_is_stale()` finds the interface up but not passing
+    traffic. Deliberately does not touch qBittorrent's bind — the vpn-bind
+    monitor already watches for the IP/interface-index change a reconnect
+    produces and re-pins it on its next poll, so nothing else needs to react
+    to this explicitly.
+    """
+    try:
+        # Absolute path: jcw-vpn-bind.service doesn't set an explicit PATH,
+        # so don't rely on inheriting one that happens to include /usr/bin.
+        subprocess.run(["/usr/bin/mullvad", "reconnect"], timeout=10, check=True,
+                        capture_output=True)
+    except Exception as e:
+        print(f"[vpn-health] mullvad reconnect failed: {e}")
+        return False
+    time.sleep(wait)
+    healthy = not tunnel_is_stale(timeout=3.0)
+    print(f"[vpn-health] reconnect {'succeeded' if healthy else 'did not clear the stale tunnel'}")
+    return healthy
 
 
 def magnet_display_name(magnet_link: str) -> str:
