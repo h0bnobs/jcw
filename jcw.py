@@ -12,6 +12,7 @@ if __name__ == '__main__':
     # args = parser.parse_args()
     default_config = {
         "download_dir": os.path.join(os.path.expanduser("~"), "Desktop"),
+        "shows_dir": "/media/shows",
         "vpn_bypass": "false",
         "bind_address": "0.0.0.0"
     }
@@ -19,6 +20,7 @@ if __name__ == '__main__':
         with open(CONFIG_FILE, "w") as f:
             json.dump(default_config, f, indent=4)
         app.config['DOWNLOAD_DIR'] = default_config["download_dir"]
+        app.config['SHOWS_DIR'] = os.environ.get('JCW_SHOWS_DIR', default_config["shows_dir"])
         app.config['VPN_BYPASS'] = default_config["vpn_bypass"]
         app.config['BIND_ADDRESS'] = default_config["bind_address"]
     else:
@@ -35,6 +37,9 @@ if __name__ == '__main__':
             with open(CONFIG_FILE, "w") as f:
                 json.dump(session_data, f, indent=4)
         app.config['DOWNLOAD_DIR'] = download_dir
+        app.config['SHOWS_DIR'] = os.environ.get(
+            'JCW_SHOWS_DIR', session_data.get('shows_dir', default_config['shows_dir'])
+        )
         app.config['VPN_BYPASS'] = vpn_bypass
         app.config['BIND_ADDRESS'] = session_data.get('bind_address', '0.0.0.0')
 

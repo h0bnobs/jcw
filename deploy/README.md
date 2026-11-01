@@ -21,6 +21,10 @@ Needs `/media/jellyfin` (or wherever `config.json`'s `download_dir` points)
 mounted and a `media-jellyfin.mount` unit for that path — see the host's
 `/etc/fstab` and the `mele-host-infra` repo for the disk-mount notes.
 
+For episode organization, the configured `shows_dir` (default `/media/shows`)
+must also be mounted and writable by the JCW service user. It can be set in
+`config.json` or with `JCW_SHOWS_DIR`; no TMDB credentials are required.
+
 ## qbittorrent.service — the torrent client itself
 
 Runs `qbittorrent-nox` headless as root, WebUI on port 9000 (see the main
