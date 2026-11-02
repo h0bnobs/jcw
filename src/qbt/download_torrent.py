@@ -86,13 +86,15 @@ def magnet_display_name(magnet_link: str) -> str:
     return unquote_plus(dn).strip()
 
 
-def already_downloaded(magnet_link: str, download_path: str) -> str | None:
+def already_downloaded(magnet_link: str, download_path: str, shows_dir: str = "") -> str | None:
     """Return the on-disk name if this torrent's content already exists.
 
     Matches the magnet display name (dn) against entries in the download
-    directory. For the public torrents this app handles, dn matches the saved
-    folder/file name, so this catches the "re-add something already grabbed"
-    case that otherwise checks to 100% and is silently removed by the cleanup.
+    directory and, when configured, against episode files already filed in the
+    shows library. For the public torrents this app handles, dn matches the
+    saved folder/file name, so this catches the "re-add something already
+    grabbed" case that otherwise checks to 100% and is silently removed by the
+    cleanup.
 
     Best-effort: a missing/odd dn or unreadable directory just skips the check
     and lets qBittorrent handle it as before.
@@ -108,10 +110,20 @@ def already_downloaded(magnet_link: str, download_path: str) -> str | None:
         # Exact match for a release folder, or `<name>.<ext>` for single files.
         if entry == name or entry.startswith(name + "."):
             return entry
+    if shows_dir:
+        try:
+            from .tv_organizer import release_is_in_library
+
+            if release_is_in_library(name, shows_dir):
+                return f"{name} (episode already filed in shows library)"
+        except Exception as e:
+            # Duplicate detection remains best-effort; do not block the
+            # existing download path if the library cannot be inspected.
+            print(f"[duplicate-check] shows library check failed: {e}")
     return None
 
 
-def download_torrent(magnet_link: str, download_path: str) -> dict:
+def download_torrent(magnet_link: str, download_path: str, shows_dir: str = "") -> dict:
     """Add a magnet to qBittorrent.
 
     Returns {ok, message} so the Flask layer can show a sensible response
@@ -120,7 +132,7 @@ def download_torrent(magnet_link: str, download_path: str) -> dict:
     """
     if not magnet_link or not magnet_link.startswith("magnet:?"):
         return {"ok": False, "message": "Invalid magnet link"}
-    existing = already_downloaded(magnet_link, download_path)
+    existing = already_downloaded(magnet_link, download_path, shows_dir)
     if existing:
         return {"ok": False, "duplicate": True,
                 "message": f"Already downloaded: {existing}"}

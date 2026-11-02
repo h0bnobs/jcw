@@ -4,7 +4,7 @@ import platform
 import re
 import subprocess
 import time
-from threading import Event
+from threading import Event, Lock
 
 from flask import Flask, render_template, request, redirect, session
 from flask_socketio import SocketIO
@@ -80,7 +80,9 @@ def download():
         return _alert_back('VPN is not active!')
     if not qbit_available():
         return _alert_back('qBittorrent is not running on port 9000.')
-    result = download_torrent(request.args.get('magnet'), app.config['DOWNLOAD_DIR'])
+    result = download_torrent(
+        request.args.get('magnet'), app.config['DOWNLOAD_DIR'], app.config.get('SHOWS_DIR', '')
+    )
     if not result.get('ok'):
         return _alert_back(result.get('message', 'Failed to add torrent'))
     return redirect('/active-downloads')
@@ -96,7 +98,7 @@ def download_magnet():
         return _alert_back("That doesn't look like a magnet link.")
     if not qbit_available():
         return _alert_back('qBittorrent is not running on port 9000.')
-    result = download_torrent(magnet, app.config['DOWNLOAD_DIR'])
+    result = download_torrent(magnet, app.config['DOWNLOAD_DIR'], app.config.get('SHOWS_DIR', ''))
     if not result.get('ok'):
         return _alert_back(result.get('message', 'Failed to add torrent'))
     return redirect('/active-downloads')
@@ -384,22 +386,52 @@ def fix_directory():
     return subprocess.run(['ls', '-al', '/media'], capture_output=True, text=True).stdout.replace('\n', '<br>') + '<br><a href="/">Go Back</a>'
 
 
-# Periodic cleanup: previously this ran on EVERY HTTP request — meaning the
-# download dir was walked dozens of times per page load and qBit was hit
-# every time the favicon loaded. We now run it at most once per CLEANUP_INTERVAL.
+# Periodic cleanup starts on the first request and then runs independently of
+# HTTP traffic, so completed torrents are handled even after the UI is closed.
 CLEANUP_INTERVAL = 30  # seconds
-_last_cleanup = 0.0
+_cleanup_worker_started = False
+_cleanup_worker_lock = Lock()
+_last_empty_directory_cleanup = 0.0
+
+
+def _cleanup_once() -> None:
+    try:
+        remove_completed_torrents(
+            app.config.get('DOWNLOAD_DIR', ''),
+            app.config.get('SHOWS_DIR', ''),
+        )
+    except Exception as e:
+        print(f"[cleanup] failed: {e}")
+
+
+def _background_cleanup():
+    """Poll completed torrents independently of subsequent web requests."""
+    while not thread_stop_event.is_set():
+        _cleanup_once()
+        socketio.sleep(CLEANUP_INTERVAL)
 
 
 @app.before_request
 def _maybe_cleanup():
-    global _last_cleanup
+    global _cleanup_worker_started, _last_empty_directory_cleanup
+    # Starting on the first request keeps app imports side-effect free. Once
+    # JCW is in use, this worker continues polling even when the UI is closed.
+    if not _cleanup_worker_started:
+        with _cleanup_worker_lock:
+            if not _cleanup_worker_started:
+                try:
+                    socketio.start_background_task(_background_cleanup)
+                    _cleanup_worker_started = True
+                except Exception as e:
+                    print(f"[cleanup] could not start background worker: {e}")
+
+    # Keep the pre-existing empty-directory cleanup request-driven; the new
+    # worker only handles completed torrents.
     now = time.time()
-    if now - _last_cleanup < CLEANUP_INTERVAL:
+    if now - _last_empty_directory_cleanup < CLEANUP_INTERVAL:
         return
-    _last_cleanup = now
+    _last_empty_directory_cleanup = now
     try:
-        remove_completed_torrents()
-        remote_empty_directories_in_download_dir(app.config['DOWNLOAD_DIR'])
+        remote_empty_directories_in_download_dir(app.config.get('DOWNLOAD_DIR', ''))
     except Exception as e:
-        print(f"[cleanup] failed: {e}")
+        print(f"[cleanup] empty-directory cleanup failed: {e}")
