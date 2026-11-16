@@ -5,13 +5,13 @@
 {% endblock %}
 
 {% block content %}
-<h1 class="page-title">active downloads</h1>
-<p class="page-subtitle">real-time download progress</p>
+<h1 class="page-title">Downloads</h1>
+<p class="page-subtitle" id="connection-status" role="status">Connecting…</p>
+<p id="action-error" class="notice notice-danger" role="alert" hidden></p>
 
 <div id="downloads-container">
     <div class="empty-state">
-        <div class="empty-icon">📭</div>
-        <p>no active downloads</p>
+        <p>Loading downloads…</p>
     </div>
 </div>
 {% endblock %}
@@ -19,6 +19,9 @@
 {% block scripts %}
 <script>
 var socket = io();
+socket.on('connect', function() { document.getElementById('connection-status').textContent = 'Connected'; });
+socket.on('disconnect', function() { document.getElementById('connection-status').textContent = 'Disconnected · Reconnecting…'; });
+socket.on('connect_error', function() { document.getElementById('connection-status').textContent = 'Unable to connect · Retrying…'; });
 
 function esc(str) {
     var d = document.createElement('div');
@@ -34,10 +37,18 @@ function formatEta(seconds) {
 }
 
 function post(url, hash) {
+    document.getElementById('action-error').hidden = true;
     return fetch(url, {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         body: 'hash=' + encodeURIComponent(hash)
+    }).then(function(response) {
+        if (!response.ok) throw new Error('Request failed');
+        return response;
+    }).catch(function() {
+        var error = document.getElementById('action-error');
+        error.textContent = 'Could not update the download. Try again.';
+        error.hidden = false;
     });
 }
 
@@ -45,9 +56,9 @@ function pauseTorrent(hash)    { post('/pause-torrent', hash); }
 function resumeTorrent(hash)   { post('/resume-torrent', hash); }
 function reannounceTorrent(hash){ post('/reannounce-torrent', hash); }
 function boostTorrent(hash, btn) {
-    if (btn) { btn.disabled = true; btn.textContent = '⚡ boosting…'; }
+    if (btn) { btn.disabled = true; btn.textContent = 'Boosting…'; }
     post('/boost-torrent', hash).finally(function() {
-        if (btn) { setTimeout(function(){ btn.disabled = false; btn.textContent = '⚡ boost'; }, 2000); }
+        if (btn) { setTimeout(function(){ btn.disabled = false; btn.textContent = 'Boost'; }, 2000); }
     });
 }
 
@@ -81,49 +92,48 @@ var STATE_LABELS = {
 socket.on('update_downloads', function(downloads) {
     var container = document.getElementById('downloads-container');
     if (!downloads || downloads.length === 0) {
-        container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>no active downloads</p></div>';
+        container.innerHTML = '<div class="empty-state"><h2>No active downloads</h2><a class="btn" href="/">Search</a></div>';
         return;
     }
     container.innerHTML = '';
     downloads.forEach(function(d) {
         var card = document.createElement('div');
         card.className = 'download-card';
-        var isPaused = d.state === 'pausedDL';
+        var isPaused = d.state === 'pausedDL' || d.state === 'stoppedDL';
         var stateInfo = STATE_LABELS[d.state] || {label: d.state || 'unknown', tag: 'state-error'};
         var isStuck = (d.state === 'metaDL' || d.state === 'stalledDL' || d.state === 'error' || d.state === 'missingFiles');
 
         var toggleBtn = isPaused
-            ? '<button class="btn btn-sm btn-success" onclick="resumeTorrent(\'' + d.hash + '\')">▶ resume</button>'
-            : '<button class="btn btn-sm" onclick="pauseTorrent(\'' + d.hash + '\')">⏸ pause</button>';
+            ? '<button class="btn btn-sm btn-success" onclick="resumeTorrent(\'' + d.hash + '\')">Resume</button>'
+            : '<button class="btn btn-sm" onclick="pauseTorrent(\'' + d.hash + '\')">Pause</button>';
 
         // Boost is the headline action when a torrent is stuck. Otherwise still
         // available but de-emphasised.
         var boostBtn = '<button class="btn btn-sm ' + (isStuck ? 'btn-warning' : '') + '" '
             + 'onclick="boostTorrent(\'' + d.hash + '\', this)" '
-            + 'title="Re-inject public trackers, force-start, then reannounce">⚡ boost</button>';
+            + 'title="Re-inject public trackers, force-start, then reannounce">Boost</button>';
         var reannBtn = '<button class="btn btn-sm" onclick="reannounceTorrent(\'' + d.hash + '\')" '
-            + 'title="Force a fresh tracker announce">↻ reannounce</button>';
+            + 'title="Force a fresh tracker announce">Reannounce</button>';
 
         var hint = '';
         if (d.state === 'metaDL') {
-            hint = '<div class="dl-hint">⏳ qBittorrent is still discovering this torrent\'s metadata. '
-                 + 'If this takes more than a minute, click <b>boost</b> — we\'ll re-inject public trackers and force a reannounce.</div>';
+            hint = '<div class="dl-hint">Waiting for metadata. <b>Boost</b> adds trackers and retries peer discovery.</div>';
         } else if (d.state === 'stalledDL') {
-            hint = '<div class="dl-hint">⚠ no peers connected. Try <b>boost</b>, or pick a torrent with more seeders.</div>';
+            hint = '<div class="dl-hint">No peers connected. Try <b>Boost</b>, or pick a torrent with more seeders.</div>';
         } else if (d.state === 'error' || d.state === 'missingFiles') {
-            hint = '<div class="dl-hint">✕ qBittorrent reported an error for this torrent. Check the qBit WebUI for details, or try <b>boost</b> + <b>recheck</b>.</div>';
+            hint = '<div class="dl-hint">qBittorrent reported an error. Check the qBittorrent Web UI for details.</div>';
         } else if (d.state === 'stoppedDL' || d.state === 'pausedDL') {
-            hint = '<div class="dl-hint">⏸ this download is stopped. Click <b>resume</b> to continue.</div>';
+            hint = '<div class="dl-hint">This download is stopped. Select <b>Resume</b> to continue.</div>';
         }
 
-        var peers = '<span title="seeds / leechers">👥 ' + (d.num_seeds || 0) + ' / ' + (d.num_leechs || 0) + '</span>';
+        var peers = '<span>Seeds / peers: ' + (d.num_seeds || 0) + ' / ' + (d.num_leechs || 0) + '</span>';
         var stateBadge = '<span class="state-badge ' + stateInfo.tag + '">' + esc(stateInfo.label) + '</span>';
 
         card.innerHTML =
             '<div class="dl-name">' + esc(d.name || d.content_path) + ' ' + stateBadge + '</div>' +
             '<div class="dl-stats">' +
-                '<span>⬇ ' + d.dlspeed.toFixed(2) + ' MB/s</span>' +
-                '<span>⏱ ' + formatEta(d.eta) + '</span>' +
+                '<span>' + d.dlspeed.toFixed(2) + ' MB/s</span>' +
+                '<span>Remaining: ' + formatEta(d.eta) + '</span>' +
                 peers +
                 '<span>' + d.progress + '%</span>' +
             '</div>' +
@@ -133,7 +143,7 @@ socket.on('update_downloads', function(downloads) {
                 toggleBtn +
                 boostBtn +
                 reannBtn +
-                '<button class="btn btn-sm btn-danger" onclick="removeTorrent(\'' + d.hash + '\')">✕ remove</button>' +
+                '<button class="btn btn-sm btn-danger" onclick="removeTorrent(\'' + d.hash + '\')">Remove</button>' +
             '</div>';
         container.appendChild(card);
     });

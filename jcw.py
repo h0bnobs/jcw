@@ -43,5 +43,6 @@ if __name__ == '__main__':
         app.config['VPN_BYPASS'] = vpn_bypass
         app.config['BIND_ADDRESS'] = session_data.get('bind_address', '0.0.0.0')
 
-    bind_address = app.config.get('BIND_ADDRESS', '0.0.0.0')
-    socketio.run(app, host=bind_address, port=80, debug=True, allow_unsafe_werkzeug=True)
+    bind_address = os.environ.get('JCW_HOST', app.config.get('BIND_ADDRESS', '0.0.0.0'))
+    port = int(os.environ.get('JCW_PORT', '80'))
+    socketio.run(app, host=bind_address, port=port, debug=True, allow_unsafe_werkzeug=True)

@@ -6,7 +6,9 @@ import subprocess
 import time
 from threading import Event, Lock
 
-from flask import Flask, render_template, request, redirect, session
+from flask import Flask, render_template, request, redirect, session, abort
+import requests
+from src.catalogue import catalogue, details
 from flask_socketio import SocketIO
 
 from src.qbt.download_history import get_all_completed_downloads
@@ -39,6 +41,37 @@ def inject_globals():
 
 @app.route('/')
 def home():
+    kind = request.args.get('type', 'movie')
+    if kind not in ('movie', 'series'):
+        abort(400)
+    query = request.args.get('q', '').strip()[:200]
+    error = None
+    try:
+        items = catalogue(kind, query)
+    except (requests.RequestException, ValueError):
+        items = []
+        error = 'Catalogue unavailable. Try again later or use torrent search.'
+    return render_template('catalogue.html', items=items, kind=kind, query=query, error=error)
+
+
+@app.route('/title/<kind>/<identifier>')
+def title_detail(kind, identifier):
+    if kind not in ('movie', 'series') or not re.fullmatch(r'tt\d+', identifier):
+        abort(404)
+    try:
+        item = details(kind, identifier)
+    except (requests.RequestException, ValueError):
+        return render_template('catalogue.html', items=[], kind=kind, query='',
+                               error='Title details unavailable. Try torrent search.'), 503
+    if not item:
+        abort(404)
+    year = re.search(r'\d{4}', item['year'])
+    search_query = item['name'] + (' ' + year[0] if kind == 'movie' and year else '')
+    return render_template('title.html', item=item, kind=kind, search_query=search_query)
+
+
+@app.route('/torrent-search')
+def torrent_search():
     return render_template('search.html', vpn_bypass=app.config.get("VPN_BYPASS", False))
 
 

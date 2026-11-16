@@ -5,6 +5,7 @@
     <title>{% block title %}Ripley{% endblock %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/utility.css">
     {% block head %}{% endblock %}
 </head>
 <body>
@@ -13,15 +14,16 @@
         <img src="/static/img/ripley.png" alt="Logo" class="logo">
         <span class="brand-name">Ripley</span>
     </a>
-    <button class="menu-toggle" onclick="document.querySelector('.nav').classList.toggle('open')" aria-label="Menu">
+    <button class="menu-toggle" onclick="this.setAttribute('aria-expanded', document.querySelector('.nav').classList.toggle('open'))" aria-label="Menu" aria-expanded="false" aria-controls="navigation">
         <span></span><span></span><span></span>
     </button>
-    <nav class="nav">
-        <a href="/" class="{{ 'active' if request.endpoint in ('home', 'search') }}">home</a>
-        <a href="/active-downloads" class="{{ 'active' if request.endpoint == 'active_downloads' }}">downloads</a>
-        <a href="/download-history" class="{{ 'active' if request.endpoint == 'download_history' }}">history</a>
-        <a href="/advanced-settings" class="{{ 'active' if request.endpoint == 'advanced_settings' }}">settings</a>
-        <a href="http://{{ qbit_host }}:9000" target="_blank" rel="noopener noreferrer">qBittorrent</a>
+    <nav class="nav" id="navigation" aria-label="Main navigation">
+        <a href="/" class="{{ 'active' if request.endpoint in ('home', 'title_detail') }}">Catalogue</a>
+        <a href="/torrent-search" class="{{ 'active' if request.endpoint in ('torrent_search', 'search') }}"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg>Torrent search</a>
+        <a href="/active-downloads" class="{{ 'active' if request.endpoint == 'active_downloads' }}"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/></svg>Downloads</a>
+        <a href="/download-history" class="{{ 'active' if request.endpoint == 'download_history' }}"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10a9 9 0 1 1 1 7M3 4v6h6m3-4v6l4 2"/></svg>History</a>
+        <a href="/advanced-settings" class="{{ 'active' if request.endpoint == 'advanced_settings' }}"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h6m4 0h6M4 17h10m4 0h2"/><circle cx="12" cy="7" r="2"/><circle cx="16" cy="17" r="2"/></svg>Settings</a>
+        <a class="nav-external" href="http://{{ qbit_host }}:9000" target="_blank" rel="noopener noreferrer">qBittorrent <span aria-hidden="true">↗</span></a>
     </nav>
 </header>
 

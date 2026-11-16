@@ -2,19 +2,18 @@
 {% block title %}Settings{% endblock %}
 
 {% block content %}
-<h1 class="page-title">settings</h1>
-<p class="page-subtitle">advanced configuration</p>
+<h1 class="page-title">Settings</h1>
 
 <div class="card">
-    <h3 class="card-title">general</h3>
+    <h2 class="card-title">General</h2>
     <form method="POST" action="/advanced-settings" id="settings-form">
         <div class="setting-row">
             <div class="setting-info">
                 <div class="setting-label">VPN bypass</div>
-                <div class="setting-desc">skip the VPN check before searching and downloading</div>
+                <div class="setting-desc">Skip the VPN check before searching and downloading.</div>
             </div>
             <label class="toggle">
-                <input type="checkbox" name="vpn_bypass" {% if vpn_bypass %}checked{% endif %}
+                <input type="checkbox" aria-label="VPN bypass" name="vpn_bypass" {% if vpn_bypass %}checked{% endif %}
                        onchange="document.getElementById('settings-form').submit()">
                 <span class="toggle-slider"></span>
             </label>
@@ -23,27 +22,27 @@
 </div>
 
 <div class="card">
-    <h3 class="card-title">network interface</h3>
-    <p class="page-subtitle" style="margin-bottom:12px">choose which interface / IP the server listens on. requires a restart to take effect.</p>
+    <h2 class="card-title">Network interface</h2>
+    <p class="page-subtitle" style="margin-bottom:12px">Server listening address. Requires a restart.</p>
     <form method="POST" action="/advanced-settings" id="nic-form">
         <input type="hidden" name="vpn_bypass" value="{{ 'on' if vpn_bypass else '' }}">
         <div class="inline-form">
-            <select name="bind_address" class="form-input" id="nic-select">
+            <select name="bind_address" aria-label="Network interface" class="form-input" id="nic-select">
                 <option value="0.0.0.0" {{ 'selected' if bind_address == '0.0.0.0' }}>0.0.0.0 — all interfaces</option>
             </select>
-            <button type="submit" class="btn btn-primary">save</button>
+            <button type="submit" class="btn btn-primary">Save</button>
         </div>
     </form>
 </div>
 
 <div class="card">
-    <h3 class="card-title">tools</h3>
+    <h2 class="card-title">Maintenance</h2>
     <div class="setting-row">
         <div class="setting-info">
             <div class="setting-label">Fix Jellyfin directory</div>
-            <div class="setting-desc">run chown on /media for jellyfin access</div>
+            <div class="setting-desc">Set ownership of /media for Jellyfin access.</div>
         </div>
-        <a href="/jellyfin" class="btn btn-sm">run</a>
+        <a href="/jellyfin" class="btn btn-sm">Run</a>
     </div>
 </div>
 {% endblock %}

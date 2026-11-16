@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}{{ item.name }} — Ripley{% endblock %}
+{% block content %}
+<a class="back-link" href="{{ url_for('home', type=kind) }}">← {{ 'Films' if kind == 'movie' else 'TV shows' }}</a>
+<article class="title-detail">
+    <div class="poster-art"><span aria-hidden="true">{{ item.name }}</span>{% if item.poster %}<img src="{{ item.poster }}" alt="Poster for {{ item.name }}" referrerpolicy="no-referrer" onerror="this.remove()">{% endif %}</div>
+    <div><h1 class="page-title">{{ item.name }}</h1>
+    <p class="page-subtitle">{{ item.year }}{% if item.runtime %} · {{ item.runtime }}{% endif %}</p>
+    <p class="title-description">{{ item.description or 'No synopsis available.' }}</p>
+    <form action="{{ url_for('search') }}" method="get">
+        <input type="hidden" name="query" value="{{ search_query }}">
+        <button class="btn btn-primary">Find downloads</button>
+    </form></div>
+</article>
+{% endblock %}

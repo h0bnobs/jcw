@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Catalogue — Ripley{% endblock %}
+{% block content %}
+<h1 class="page-title">Catalogue</h1>
+<form action="/" method="get" class="search-row results-search">
+    <input type="hidden" name="type" value="{{ kind }}">
+    <input class="form-input" name="q" value="{{ query }}" aria-label="Search catalogue" placeholder="{{ 'Search films' if kind == 'movie' else 'Search TV shows' }}" maxlength="200">
+    <button class="btn btn-primary">Search</button>
+</form>
+<nav class="catalogue-tabs" aria-label="Catalogue type">
+    <a href="{{ url_for('home', type='movie', q=query) }}" {% if kind == 'movie' %}aria-current="page"{% endif %}>Films</a>
+    <a href="{{ url_for('home', type='series', q=query) }}" {% if kind == 'series' %}aria-current="page"{% endif %}>TV shows</a>
+</nav>
+<div class="catalogue-heading"><h2>{{ 'Results' if query else 'Popular' }}</h2><span>Metadata: <a href="https://cinemeta.strem.io/" target="_blank" rel="noopener noreferrer">Cinemeta</a></span></div>
+{% if error %}
+<div class="empty-state" role="status"><p>{{ error }}</p><a class="btn" href="{{ url_for('torrent_search') }}">Torrent search</a></div>
+{% elif not items %}
+<div class="empty-state"><h2>No titles found</h2><a class="btn" href="{{ url_for('torrent_search') }}">Torrent search</a></div>
+{% else %}
+<div class="poster-grid">
+{% for item in items %}
+<a class="poster-card" href="{{ url_for('title_detail', kind=kind, identifier=item.id) }}">
+    <div class="poster-art"><span aria-hidden="true">{{ item.name }}</span>{% if item.poster %}<img src="{{ item.poster }}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.remove()">{% endif %}</div>
+    <h3>{{ item.name }}</h3><p>{{ item.year }}</p>
+</a>
+{% endfor %}
+</div>
+{% endif %}
+{% endblock %}
