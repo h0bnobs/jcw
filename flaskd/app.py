@@ -427,11 +427,23 @@ _cleanup_worker_lock = Lock()
 _last_empty_directory_cleanup = 0.0
 
 
+def _show_resolver(title, year):
+    """Identify a new show so the organizer can create its library folder.
+
+    Keyless by default (Cinemeta -> IMDb id); upgrades to a TMDB id when a key
+    is configured. Imported lazily so the network-facing lookup is only pulled
+    in when cleanup actually runs.
+    """
+    from src.qbt.show_lookup import resolve_show
+    return resolve_show(title, year, app.config.get('TMDB_API_KEY') or None)
+
+
 def _cleanup_once() -> None:
     try:
         remove_completed_torrents(
             app.config.get('DOWNLOAD_DIR', ''),
             app.config.get('SHOWS_DIR', ''),
+            _show_resolver,
         )
     except Exception as e:
         print(f"[cleanup] failed: {e}")

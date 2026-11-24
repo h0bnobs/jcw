@@ -323,10 +323,60 @@ def _already_organized(release: EpisodeRelease, show: ShowFolder) -> bool:
     return set(release.episodes).issubset(present)
 
 
+def _ensure_show_folder(
+    title: str, year: str | None, shows_dir: str, show_resolver, cache: dict,
+) -> tuple[ShowFolder | None, str]:
+    """Find the library folder for ``title``, creating one for a new show.
+
+    Falls back to the conservative behaviour (return no show) unless a
+    ``show_resolver`` is supplied *and* it confidently identifies the show; only
+    then is a new ``Title (Year) [provider-id]`` folder created. Results are
+    cached per (normalized title, year) so a multi-file season pack resolves the
+    show once.
+    """
+    key = (_normalize_title(title), year or "")
+    if key in cache:
+        return cache[key]
+
+    show, reason = match_library_show(title, shows_dir, year)
+    if show is None and show_resolver is not None:
+        try:
+            identity = show_resolver(title, year)
+        except Exception as error:  # best-effort: never block on a lookup
+            identity = None
+            reason = f"{reason or 'no existing show folder'}; metadata lookup failed: {error}"
+        if identity is not None and identity.provider_tag():
+            folder = os.path.join(shows_dir, identity.folder_name())
+            if not _is_within(folder, shows_dir):
+                show, reason = None, "resolved show folder is outside the shows library"
+            else:
+                try:
+                    os.makedirs(folder, exist_ok=True)
+                    show = ShowFolder(
+                        title=identity.title,
+                        year=identity.year or (year or ""),
+                        tmdb_id=identity.tmdb_id or "",
+                        path=folder,
+                    )
+                    reason = ""
+                except OSError as error:
+                    show, reason = None, f"could not create show folder: {error}"
+
+    cache[key] = (show, reason)
+    return show, reason
+
+
 def organize_completed_torrent(
-    torrent: dict, download_dir: str, shows_dir: str,
+    torrent: dict, download_dir: str, shows_dir: str, show_resolver=None,
 ) -> OrganizationResult:
-    """File recognized episode videos and report whether the torrent can be removed."""
+    """File recognized episode videos and report whether the torrent can be removed.
+
+    ``show_resolver`` is an optional ``(title, year) -> ShowIdentity | None``
+    callable. When provided, a recognized episode whose show has no existing
+    library folder gets a new folder created from the resolver's answer instead
+    of being left for review. When omitted, behaviour is unchanged: only shows
+    that already have a folder are filed.
+    """
     torrent_name = str(torrent.get("name", ""))
     torrent_release = parse_episode_release(torrent_name)
     content_path = _torrent_content_path(torrent, download_dir)
@@ -364,10 +414,13 @@ def organize_completed_torrent(
         return OrganizationResult(REVIEW, "one or more video files do not identify an episode")
 
     moves: list[tuple[str, str]] = []
+    folder_cache: dict = {}
     for source, release in parsed:
         if not release.series_title:
             return OrganizationResult(REVIEW, "episode release has no identifiable series title")
-        show, reason = match_library_show(release.series_title, shows_dir, release.year)
+        show, reason = _ensure_show_folder(
+            release.series_title, release.year, shows_dir, show_resolver, folder_cache,
+        )
         if not show:
             return OrganizationResult(REVIEW, reason)
         filename = os.path.basename(source)

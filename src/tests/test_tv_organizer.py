@@ -101,6 +101,53 @@ class TvOrganizerTests(unittest.TestCase):
         self.assertTrue(os.path.isfile(source))
         self.assertTrue(os.path.isfile(existing))
 
+    def test_new_show_folder_is_created_when_resolver_identifies_it(self):
+        from src.qbt.show_lookup import ShowIdentity
+
+        torrent, source, filename = self._torrent("Brand.New.Show.S01E01.1080p.WEB-DL")
+
+        def resolver(title, year):
+            return ShowIdentity("Brand New Show", "2021", tmdb_id=None, imdb_id="tt9999999")
+
+        result = organize_completed_torrent(
+            torrent, self.download_dir, self.shows_dir, resolver,
+        )
+
+        destination = os.path.join(
+            self.shows_dir, "Brand New Show (2021) [imdbid-tt9999999]", "Season 01", filename,
+        )
+        self.assertEqual(result.status, ORGANIZED)
+        self.assertTrue(os.path.isfile(destination))
+        self.assertFalse(os.path.exists(source))
+
+    def test_resolver_tmdb_id_is_used_in_new_folder_name(self):
+        from src.qbt.show_lookup import ShowIdentity
+
+        torrent, _source, filename = self._torrent("Brand.New.Show.S02E03.1080p.WEB-DL")
+
+        def resolver(title, year):
+            return ShowIdentity("Brand New Show", "2021", tmdb_id="4242", imdb_id="tt9999999")
+
+        result = organize_completed_torrent(
+            torrent, self.download_dir, self.shows_dir, resolver,
+        )
+
+        destination = os.path.join(
+            self.shows_dir, "Brand New Show (2021) [tmdbid-4242]", "Season 02", filename,
+        )
+        self.assertEqual(result.status, ORGANIZED)
+        self.assertTrue(os.path.isfile(destination))
+
+    def test_new_show_without_identity_is_left_for_review(self):
+        torrent, source, _filename = self._torrent("Unknowable.Show.S01E02.1080p")
+
+        result = organize_completed_torrent(
+            torrent, self.download_dir, self.shows_dir, lambda title, year: None,
+        )
+
+        self.assertEqual(result.status, REVIEW)
+        self.assertTrue(os.path.isfile(source))
+
     def test_retry_after_file_move_is_idempotent(self):
         torrent, _source, filename = self._torrent()
         first = organize_completed_torrent(torrent, self.download_dir, self.shows_dir)
