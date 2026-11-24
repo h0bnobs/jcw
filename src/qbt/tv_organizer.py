@@ -227,6 +227,53 @@ def _is_within(path: str, root: str) -> bool:
         return False
 
 
+def _chown_to_match(target: str, reference: str) -> None:
+    """Best-effort: give ``target`` the owner and group of ``reference``.
+
+    The organizer runs as root, while the media server reads and writes the
+    library as its own service user. A directory created here would otherwise be
+    owned by root and left unwritable by that user, which (for example) makes
+    Jellyfin silently fail to save downloaded subtitles into it. New library
+    directories therefore inherit the ownership of the library root. Does
+    nothing when unprivileged or on platforms without ``os.chown`` (e.g.
+    Windows), so ordinary runs and tests are unaffected.
+    """
+    if not hasattr(os, "chown") or not hasattr(os, "geteuid") or os.geteuid() != 0:
+        return
+    try:
+        ref = os.stat(reference)
+        current = os.stat(target)
+    except OSError:
+        return
+    if current.st_uid == ref.st_uid and current.st_gid == ref.st_gid:
+        return
+    try:
+        os.chown(target, ref.st_uid, ref.st_gid)
+    except OSError:
+        return
+
+
+def _makedirs_in_library(path: str, shows_dir: str) -> None:
+    """Create ``path`` and match library ownership on every directory up to root.
+
+    Every directory from ``path`` up to (but excluding) ``shows_dir`` is given
+    the same owner as ``shows_dir`` so the media server can write into it.
+    Falls back to a plain ``makedirs`` when ``path`` is not inside ``shows_dir``;
+    ownership is only ever adjusted within the library tree.
+    """
+    os.makedirs(path, exist_ok=True)
+    if not _is_within(path, shows_dir):
+        return
+    shows_root = os.path.realpath(shows_dir)
+    current = os.path.realpath(path)
+    while current != shows_root:
+        _chown_to_match(current, shows_dir)
+        parent = os.path.dirname(current)
+        if parent == current:  # reached the filesystem root defensively
+            break
+        current = parent
+
+
 def _torrent_content_path(torrent: dict, download_dir: str) -> str | None:
     name = str(torrent.get("name", ""))
     save_path = str(torrent.get("save_path", download_dir) or download_dir)
@@ -283,7 +330,7 @@ def _release_for_video(
     return EpisodeRelease(title, release.season, release.episodes, release.year or year)
 
 
-def _move_without_overwrite(source: str, destination: str) -> None:
+def _move_without_overwrite(source: str, destination: str, shows_dir: str) -> None:
     """Move a file atomically where possible, never replacing a destination."""
     if os.path.abspath(source) == os.path.abspath(destination):
         return
@@ -292,7 +339,7 @@ def _move_without_overwrite(source: str, destination: str) -> None:
             os.unlink(source)
             return
         raise FileExistsError(destination)
-    os.makedirs(os.path.dirname(destination), exist_ok=True)
+    _makedirs_in_library(os.path.dirname(destination), shows_dir)
     try:
         # Hard-linking then unlinking is atomic at the destination and fails if
         # a file already exists there. The media directories normally share a
@@ -351,7 +398,7 @@ def _ensure_show_folder(
                 show, reason = None, "resolved show folder is outside the shows library"
             else:
                 try:
-                    os.makedirs(folder, exist_ok=True)
+                    _makedirs_in_library(folder, shows_dir)
                     show = ShowFolder(
                         title=identity.title,
                         year=identity.year or (year or ""),
@@ -456,7 +503,7 @@ def organize_completed_torrent(
 
     try:
         for source, destination in moves:
-            _move_without_overwrite(source, destination)
+            _move_without_overwrite(source, destination, shows_dir)
     except OSError as error:
         return OrganizationResult(REVIEW, f"could not safely move episode file: {error}")
 
