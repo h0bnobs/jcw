@@ -1,0 +1,20 @@
+name: deploy
+
+# Event-driven deploy: a self-hosted runner on mele (user "ghrunner") runs the
+# vetted deploy script, which fast-forwards /root/jcw to origin/main and
+# restarts jcw.service. Triggers only on pushes to main (never fork PRs), and
+# the runner is unprivileged with sudo limited to just this one script.
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: jcw-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, mele]
+    steps:
+      - name: Pull latest main onto mele and restart jcw
+        run: sudo /usr/local/bin/jcw-autodeploy.sh
