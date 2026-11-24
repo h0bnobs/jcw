@@ -17,7 +17,8 @@ _COMPLETED_STATES = {
 }
 
 
-def remove_completed_torrents(download_dir: str = "", shows_dir: str = "") -> None:
+def remove_completed_torrents(download_dir: str = "", shows_dir: str = "",
+                              show_resolver=None) -> None:
     try:
         client = qb()
     except QbitUnavailable:
@@ -32,7 +33,7 @@ def remove_completed_torrents(download_dir: str = "", shows_dir: str = "") -> No
         if state in _COMPLETED_STATES and progress >= 1.0:
             if download_dir and shows_dir:
                 try:
-                    result = organize_completed_torrent(t, download_dir, shows_dir)
+                    result = organize_completed_torrent(t, download_dir, shows_dir, show_resolver)
                 except Exception as e:
                     # Fail closed: a recognized episode must not be removed
                     # from qBittorrent if filing failed unexpectedly.

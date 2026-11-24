@@ -14,7 +14,11 @@ if __name__ == '__main__':
         "download_dir": os.path.join(os.path.expanduser("~"), "Desktop"),
         "shows_dir": "/media/shows",
         "vpn_bypass": "false",
-        "bind_address": "0.0.0.0"
+        "bind_address": "0.0.0.0",
+        # Optional. When set, new show folders are named with a [tmdbid-N] tag to
+        # match the existing library; left empty, new shows are filed keylessly
+        # with an [imdbid-ttN] tag via Cinemeta. Env JCW_TMDB_API_KEY overrides.
+        "tmdb_api_key": ""
     }
     if not os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, "w") as f:
@@ -23,6 +27,7 @@ if __name__ == '__main__':
         app.config['SHOWS_DIR'] = os.environ.get('JCW_SHOWS_DIR', default_config["shows_dir"])
         app.config['VPN_BYPASS'] = default_config["vpn_bypass"]
         app.config['BIND_ADDRESS'] = default_config["bind_address"]
+        app.config['TMDB_API_KEY'] = os.environ.get('JCW_TMDB_API_KEY', default_config["tmdb_api_key"])
     else:
         with open(CONFIG_FILE) as f:
             try:
@@ -42,6 +47,9 @@ if __name__ == '__main__':
         )
         app.config['VPN_BYPASS'] = vpn_bypass
         app.config['BIND_ADDRESS'] = session_data.get('bind_address', '0.0.0.0')
+        app.config['TMDB_API_KEY'] = os.environ.get(
+            'JCW_TMDB_API_KEY', session_data.get('tmdb_api_key', '')
+        )
 
     bind_address = os.environ.get('JCW_HOST', app.config.get('BIND_ADDRESS', '0.0.0.0'))
     port = int(os.environ.get('JCW_PORT', '80'))

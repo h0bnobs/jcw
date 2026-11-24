@@ -24,7 +24,7 @@ class RemoveCompletedTorrentsTests(unittest.TestCase):
 
         remove_completed_torrents("/downloads", "/shows")
 
-        organize.assert_called_once_with(self.torrent, "/downloads", "/shows")
+        organize.assert_called_once_with(self.torrent, "/downloads", "/shows", None)
         self.client.delete.assert_not_called()
 
     @patch("src.qbt.remove_torrents.qb")
