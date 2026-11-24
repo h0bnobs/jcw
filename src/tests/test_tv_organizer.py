@@ -1,10 +1,12 @@
 import os
 import tempfile
 import unittest
+from unittest import mock
 
 from src.qbt.tv_organizer import (
     ORGANIZED,
     REVIEW,
+    _makedirs_in_library,
     match_library_show,
     organize_completed_torrent,
     parse_episode_release,
@@ -157,6 +159,74 @@ class TvOrganizerTests(unittest.TestCase):
         self.assertEqual(first.status, ORGANIZED)
         self.assertEqual(second.status, ORGANIZED)
         self.assertTrue(os.path.isfile(os.path.join(self.show_path, "Season 01", filename)))
+
+
+class LibraryOwnershipTests(unittest.TestCase):
+    """New library directories must inherit the library root's ownership so the
+    media server (running as its own user) can write into them, e.g. to save
+    downloaded subtitles. The organizer runs as root, so it does the chown."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.shows_dir = os.path.join(self.temp.name, "shows")
+        os.makedirs(self.shows_dir)
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def _record_chowns(self, geteuid, library_uid=110, library_gid=111):
+        """Patch stat/chown/geteuid so the library root looks service-owned and
+        chown is recorded instead of performed. Returns the recorded list."""
+        real_stat = os.stat
+        fake_ref = mock.Mock(st_uid=library_uid, st_gid=library_gid)
+
+        def fake_stat(path, *args, **kwargs):
+            if os.path.realpath(path) == os.path.realpath(self.shows_dir):
+                return fake_ref
+            return real_stat(path, *args, **kwargs)
+
+        chowned: list[tuple[str, int, int]] = []
+        return chowned, (
+            mock.patch("src.qbt.tv_organizer.os.geteuid", return_value=geteuid),
+            mock.patch("src.qbt.tv_organizer.os.stat", side_effect=fake_stat),
+            mock.patch(
+                "src.qbt.tv_organizer.os.chown",
+                side_effect=lambda p, u, g: chowned.append((os.path.realpath(p), u, g)),
+            ),
+        )
+
+    def test_created_dirs_inherit_library_owner_when_root(self):
+        target = os.path.join(self.shows_dir, "New Show (2021) [tmdbid-1]", "Season 01")
+        chowned, patches = self._record_chowns(geteuid=0)
+        with patches[0], patches[1], patches[2]:
+            _makedirs_in_library(target, self.shows_dir)
+
+        self.assertTrue(os.path.isdir(target))
+        got = {path for path, _uid, _gid in chowned}
+        self.assertEqual(
+            got,
+            {os.path.realpath(target), os.path.realpath(os.path.dirname(target))},
+        )
+        # Library root itself is never touched.
+        self.assertNotIn(os.path.realpath(self.shows_dir), got)
+        for _path, uid, gid in chowned:
+            self.assertEqual((uid, gid), (110, 111))
+
+    def test_no_chown_when_unprivileged(self):
+        target = os.path.join(self.shows_dir, "New Show", "Season 01")
+        with mock.patch("src.qbt.tv_organizer.os.geteuid", return_value=1000), \
+                mock.patch("src.qbt.tv_organizer.os.chown") as chown:
+            _makedirs_in_library(target, self.shows_dir)
+        self.assertTrue(os.path.isdir(target))
+        chown.assert_not_called()
+
+    def test_path_outside_library_is_never_chowned(self):
+        outside = os.path.join(self.temp.name, "elsewhere", "deep")
+        with mock.patch("src.qbt.tv_organizer.os.geteuid", return_value=0), \
+                mock.patch("src.qbt.tv_organizer.os.chown") as chown:
+            _makedirs_in_library(outside, self.shows_dir)
+        self.assertTrue(os.path.isdir(outside))
+        chown.assert_not_called()
 
 
 if __name__ == "__main__":
